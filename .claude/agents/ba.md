@@ -20,7 +20,7 @@ Write findings to `context/features/current-feature.md` (Goals + Notes sections)
 
 ### 1. Requirements Discovery
 - What problem does this solve for the user?
-- Who is the user? (quiz player, explorer, first-time visitor)
+- Who is the user? (user, admin, not logged in)
 - What does success look like — what can the user do after this that they couldn't before?
 - What are the non-functional requirements? (performance, accessibility, mobile)
 

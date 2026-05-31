@@ -1,0 +1,9 @@
+export const MAX_EVENT_TITLE = 150
+export const MAX_EVENT_SLUG = 200
+export const MAX_EVENT_LOCATION = 100
+export const MAX_NAME = 50
+export const MAX_EMAIL = 254
+export const MAX_URL = 2048
+export const MAX_YOOKASSA_PAYMENT_ID = 100
+export const MAX_DESCRIPTION = 1000
+export const MAX_EXPEDITION_DAY_TITLE = 150
