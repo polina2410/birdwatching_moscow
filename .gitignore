@@ -26,6 +26,9 @@ package-lock.json
 *.tsbuildinfo
 next-env.d.ts
 
+# prisma generated client
+/generated/
+
 # os
 .DS_Store
 Thumbs.db
