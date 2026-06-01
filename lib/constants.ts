@@ -7,3 +7,8 @@ export const MAX_URL = 2048
 export const MAX_YOOKASSA_PAYMENT_ID = 100
 export const MAX_DESCRIPTION = 1000
 export const MAX_EXPEDITION_DAY_TITLE = 150
+
+export const PASSWORD_MIN_LENGTH = 8
+export const BCRYPT_COST = 12
+// NOTE: 1 hour TTL for password reset tokens
+export const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000

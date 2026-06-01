@@ -7,9 +7,6 @@ on:
     branches: [main]
 
 env:
-  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-  UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-  UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
   NEXT_PUBLIC_APP_URL: http://localhost:3000
 
 jobs:
@@ -24,24 +21,28 @@ jobs:
         with:
           node-version: 20
 
-      - name: Cache node_modules
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Cache pnpm store
         uses: actions/cache@v4
         with:
-          path: node_modules
-          key: node-modules-${{ hashFiles('package-lock.json') }}
-          restore-keys: node-modules-
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: npm run lint
+        run: pnpm lint
 
       - name: Typecheck
-        run: npm run typecheck
+        run: pnpm typecheck
 
       - name: Test
-        run: npm run test:run
+        run: pnpm test:run
 
       - name: Build
-        run: npm run build
+        run: pnpm build
