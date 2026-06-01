@@ -8,6 +8,12 @@ export const MAX_YOOKASSA_PAYMENT_ID = 100
 export const MAX_DESCRIPTION = 1000
 export const MAX_EXPEDITION_DAY_TITLE = 150
 
+export const MAX_GALLERY_IMAGES = 30
+export const MAX_PROFILE_LINKS = 10
+export const MAX_EXPEDITION_DAYS = 30
+export const MAX_GUIDES_PER_EVENT = 10
+export const MAX_REQUEST_NAME = 100
+
 export const PASSWORD_MIN_LENGTH = 8
 export const BCRYPT_COST = 12
 // NOTE: 1 hour TTL for password reset tokens

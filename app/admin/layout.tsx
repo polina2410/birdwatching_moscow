@@ -1,0 +1,53 @@
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { auth } from '@/lib/auth'
+import { isAdmin, isSuperAdmin } from '@/lib/auth/permissions'
+import { AdminLogoutButton } from '@/components/admin/AdminLogoutButton'
+import { Badge } from '@/components/ui/badge'
+import { Toaster } from '@/components/ui/sonner'
+
+const ROLE_LABELS: Record<string, string> = {
+  USER: 'Пользователь',
+  ADMIN: 'Админ',
+  SUPERADMIN: 'Суперадмин',
+}
+
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth()
+  if (!session?.user || !isAdmin(session.user.role)) redirect('/')
+
+  const { name, role } = session.user
+
+  return (
+    <div className="flex min-h-screen">
+      <aside className="w-56 border-r bg-muted/40 flex flex-col">
+        <div className="p-4 border-b">
+          <p className="font-semibold text-sm">Birdwatching Moscow</p>
+          <p className="text-xs text-muted-foreground mt-1 truncate">{name}</p>
+          <Badge variant="secondary" className="mt-1 text-xs">{ROLE_LABELS[role] ?? role}</Badge>
+        </div>
+        <nav className="flex-1 p-2 space-y-1">
+          <Link href="/admin/events" className="flex items-center rounded-md px-3 py-2 text-sm hover:bg-accent">
+            События
+          </Link>
+          <Link href="/admin/team" className="flex items-center rounded-md px-3 py-2 text-sm hover:bg-accent">
+            Команда
+          </Link>
+          <Link href="/admin/requests" className="flex items-center rounded-md px-3 py-2 text-sm hover:bg-accent">
+            Заявки
+          </Link>
+          {isSuperAdmin(role) && (
+            <Link href="/admin/users" className="flex items-center rounded-md px-3 py-2 text-sm hover:bg-accent">
+              Пользователи
+            </Link>
+          )}
+        </nav>
+        <div className="p-4 border-t">
+          <AdminLogoutButton />
+        </div>
+      </aside>
+      <main className="flex-1 p-6 overflow-auto">{children}</main>
+      <Toaster />
+    </div>
+  )
+}

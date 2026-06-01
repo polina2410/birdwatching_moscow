@@ -11,6 +11,7 @@ generator client {
 enum Role {
   USER
   ADMIN
+  SUPERADMIN
 }
 
 enum EventType {
@@ -38,6 +39,11 @@ enum RequestType {
   EXPEDITION
 }
 
+enum RequestStatus {
+  NEW
+  WAITLIST
+}
+
 model User {
   id           String    @id @default(uuid())
   // NOTE: NOT @unique — uniqueness is a partial index WHERE "deletedAt" IS NULL, added via raw SQL in migration
@@ -49,11 +55,15 @@ model User {
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
 
+  blockedAt            DateTime?
+
   orders               Order[]
   tickets              Ticket[]
   cartItems            CartItem[]
   publishedEvents      Event[]               @relation("EventPublisher")
   passwordResetTokens  PasswordResetToken[]
+  roleChangesAsTarget  RoleChangeLog[]       @relation("RoleChangeTarget")
+  roleChangesAsChanger RoleChangeLog[]       @relation("RoleChangeChanger")
 }
 
 model Event {
@@ -78,6 +88,7 @@ model Event {
   galleryUrls  String[]
   publishedAt  DateTime?
   publishedBy  String?
+  createdAt    DateTime  @default(now())
 
   publisher  User?           @relation("EventPublisher", fields: [publishedBy], references: [id])
   days       ExpeditionDay[]
@@ -169,14 +180,32 @@ model PasswordResetToken {
 }
 
 model Request {
-  id        String      @id @default(uuid())
+  id        String        @id @default(uuid())
   type      RequestType
   // NOTE: set for EXPEDITION requests, null for PRIVATE_WALK
   eventId   String?
-  name      String      @db.VarChar(100)
-  email     String      @db.VarChar(254)
-  message   String      @db.Text
-  createdAt DateTime    @default(now())
+  name      String        @db.VarChar(100)
+  email     String        @db.VarChar(254)
+  message   String        @db.Text
+  status    RequestStatus @default(NEW)
+  createdAt DateTime      @default(now())
 
   event Event? @relation(fields: [eventId], references: [id])
+
+  @@index([status])
+}
+
+model RoleChangeLog {
+  id              String   @id @default(uuid())
+  targetUserId    String
+  changedByUserId String
+  fromRole        Role
+  toRole          Role
+  createdAt       DateTime @default(now())
+
+  targetUser    User @relation("RoleChangeTarget", fields: [targetUserId], references: [id])
+  changedByUser User @relation("RoleChangeChanger", fields: [changedByUserId], references: [id])
+
+  @@index([targetUserId])
+  @@index([createdAt])
 }

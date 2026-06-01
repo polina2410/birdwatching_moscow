@@ -1,9 +1,13 @@
-import NextAuth from 'next-auth'
+import NextAuth, { CredentialsSignin } from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { loginSchema } from '@/lib/validation/auth'
 import authConfig from '@/auth.config'
+
+class AccountBlockedError extends CredentialsSignin {
+  code = 'account_blocked'
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
@@ -23,6 +27,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const passwordMatch = await bcrypt.compare(password, user.passwordHash)
         if (!passwordMatch) return null
+
+        if (user.blockedAt) throw new AccountBlockedError()
 
         return { id: user.id, email: user.email, name: user.name, role: user.role }
       },
