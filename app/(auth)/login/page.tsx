@@ -23,7 +23,9 @@ function LoginForm() {
       redirect: false,
     })
     setLoading(false)
-    if (result?.error) {
+    if (result?.code === 'account_blocked') {
+      setError('Ваш аккаунт заблокирован. Обратитесь к администратору.')
+    } else if (result?.error) {
       setError('Invalid email or password')
     } else {
       router.push(callbackUrl)
