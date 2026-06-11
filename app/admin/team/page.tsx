@@ -1,9 +1,11 @@
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/auth/requireAdmin'
 import Link from 'next/link'
 import { buttonVariants } from '@/components/ui/button'
 import { TeamTable } from '@/components/admin/TeamTable'
 
 export default async function AdminTeamPage() {
+  await requireAdmin()
   const members = await prisma.teamMember.findMany({
     orderBy: { sortOrder: 'asc' },
     include: { _count: { select: { events: true } } },

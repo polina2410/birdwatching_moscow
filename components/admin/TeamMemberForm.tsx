@@ -1,6 +1,8 @@
 'use client'
 
 import { useForm, useFieldArray } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
 import { toast } from 'sonner'
@@ -10,21 +12,25 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import type { TeamMember } from '@/generated/prisma/client'
+import { MAX_NAME, MAX_URL, MAX_DESCRIPTION, MAX_PROFILE_LINKS } from '@/lib/constants'
 
-type FormValues = {
-  name: string
-  photoUrl: string
-  education: string
-  achievements: string
-  profileLinks: { value: string }[]
-  sortOrder: string
-}
+const teamMemberFormSchema = z.object({
+  name: z.string().min(1, 'Обязательное поле').max(MAX_NAME, `Максимум ${MAX_NAME} символов`),
+  photoUrl: z.string().min(1, 'Обязательное поле').url('Введите корректный URL'),
+  education: z.string().max(MAX_DESCRIPTION, `Максимум ${MAX_DESCRIPTION} символов`),
+  achievements: z.string().max(MAX_DESCRIPTION, `Максимум ${MAX_DESCRIPTION} символов`),
+  profileLinks: z.array(z.object({ value: z.string() })).max(MAX_PROFILE_LINKS),
+  sortOrder: z.string().regex(/^\d+$/, 'Введите целое число 0 или больше'),
+})
+
+type FormValues = z.infer<typeof teamMemberFormSchema>
 
 export const TeamMemberForm = ({ member }: { member?: TeamMember }) => {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
-  const { register, handleSubmit, control } = useForm<FormValues>({
+  const { register, handleSubmit, control, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(teamMemberFormSchema),
     defaultValues: {
       name: member?.name ?? '',
       photoUrl: member?.photoUrl ?? '',
@@ -68,22 +74,26 @@ export const TeamMemberForm = ({ member }: { member?: TeamMember }) => {
     <form onSubmit={onSubmit} className="space-y-6 max-w-xl">
       <div>
         <Label htmlFor="name">Имя *</Label>
-        <Input id="name" {...register('name', { required: true })} disabled={isPending} />
+        <Input id="name" {...register('name')} disabled={isPending} />
+        {errors.name && <p className="text-destructive text-sm mt-1">{errors.name.message}</p>}
       </div>
 
       <div>
         <Label htmlFor="photoUrl">Фото (URL) *</Label>
-        <Input id="photoUrl" type="url" {...register('photoUrl', { required: true })} disabled={isPending} />
+        <Input id="photoUrl" type="url" {...register('photoUrl')} disabled={isPending} />
+        {errors.photoUrl && <p className="text-destructive text-sm mt-1">{errors.photoUrl.message}</p>}
       </div>
 
       <div>
         <Label htmlFor="education">Образование</Label>
         <Textarea id="education" {...register('education')} disabled={isPending} rows={3} />
+        {errors.education && <p className="text-destructive text-sm mt-1">{errors.education.message}</p>}
       </div>
 
       <div>
         <Label htmlFor="achievements">Достижения</Label>
         <Textarea id="achievements" {...register('achievements')} disabled={isPending} rows={3} />
+        {errors.achievements && <p className="text-destructive text-sm mt-1">{errors.achievements.message}</p>}
       </div>
 
       <div>
@@ -103,7 +113,8 @@ export const TeamMemberForm = ({ member }: { member?: TeamMember }) => {
 
       <div>
         <Label htmlFor="sortOrder">Порядок сортировки *</Label>
-        <Input id="sortOrder" type="number" min="0" {...register('sortOrder', { required: true })} disabled={isPending} className="max-w-[140px]" />
+        <Input id="sortOrder" type="number" min="0" {...register('sortOrder')} disabled={isPending} className="max-w-[140px]" />
+        {errors.sortOrder && <p className="text-destructive text-sm mt-1">{errors.sortOrder.message}</p>}
       </div>
 
       <Button type="submit" disabled={isPending}>Сохранить</Button>

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/auth/requireAdmin'
 import { RequestsTable } from '@/components/admin/RequestsTable'
 import type { RequestStatus, RequestType } from '@/generated/prisma/client'
 
@@ -14,6 +15,7 @@ type Props = {
 }
 
 export default async function AdminRequestsPage({ searchParams }: Props) {
+  await requireAdmin()
   const params = await searchParams
   const page = Math.max(1, Number(params.page ?? 1))
   const status = params.status as RequestStatus | undefined

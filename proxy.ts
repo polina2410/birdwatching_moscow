@@ -44,7 +44,11 @@ export async function proxy(request: NextRequest) {
     }
 
     if (isProtectedAdmin && token) {
-      const role = token.role as Role;
+      const rawRole = token.role as string
+      if (!['USER', 'ADMIN', 'SUPERADMIN'].includes(rawRole)) {
+        return NextResponse.redirect(new URL('/', request.nextUrl))
+      }
+      const role = rawRole as Role
 
       if (!isAdmin(role)) {
         return NextResponse.redirect(new URL('/', request.nextUrl));

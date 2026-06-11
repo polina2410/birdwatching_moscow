@@ -1,16 +1,9 @@
 'use server'
 
-import { auth } from '@/lib/auth'
-import { isAdmin } from '@/lib/auth/permissions'
+import { requireAdmin } from '@/lib/auth/requireAdmin'
 import { prisma } from '@/lib/prisma'
 import { teamMemberSchema, type TeamMemberInput } from '@/lib/validation/admin'
 import { revalidatePath } from 'next/cache'
-
-async function requireAdmin() {
-  const session = await auth()
-  if (!session?.user || !isAdmin(session.user.role)) throw new Error('Forbidden')
-  return session.user
-}
 
 export async function createTeamMember(input: TeamMemberInput): Promise<string> {
   await requireAdmin()

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { requireSuperAdmin } from '@/lib/auth/requireAdmin'
 import { UsersTable } from '@/components/admin/UsersTable'
 import type { Role } from '@/generated/prisma/client'
 
@@ -15,6 +16,7 @@ type Props = {
 }
 
 export default async function AdminUsersPage({ searchParams }: Props) {
+  await requireSuperAdmin()
   const params = await searchParams
   const page = Math.max(1, Number(params.page ?? 1))
   const role = params.role as Role | undefined

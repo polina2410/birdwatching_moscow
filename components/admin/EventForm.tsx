@@ -1,8 +1,10 @@
 'use client'
 
 import { useForm, useFieldArray } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { useRouter } from 'next/navigation'
-import { useTransition, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { createEvent, updateEvent, publishEvent, cancelEvent, deleteEvent, restoreEvent } from '@/app/admin/events/_actions'
@@ -14,46 +16,60 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Event, ExpeditionDay, EventStatus } from '@/generated/prisma/client'
+import { MAX_EVENT_TITLE, MAX_EVENT_LOCATION, MAX_DESCRIPTION, MAX_URL } from '@/lib/constants'
+import { useAdminAction } from '@/hooks/useAdminAction'
+import { generateSlug } from '@/lib/utils'
 
 type GuideOption = { id: string; name: string }
-type EventWithDays = Event & { days: ExpeditionDay[]; guides: { id: string }[] }
+type EventWithDays = Event & { days: ExpeditionDay[]; guides: { id: string }[]; _count: { tickets: number } }
 
 type Props =
   | { event?: undefined; guides: GuideOption[] }
   | { event: EventWithDays; guides: GuideOption[] }
-
-function generateSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .slice(0, 180)
-}
 
 const toDatetimeLocal = (d: Date | string) => {
   const date = new Date(d)
   return format(date, "yyyy-MM-dd'T'HH:mm")
 }
 
-type FormValues = {
-  type: 'WALK' | 'EXPEDITION'
-  title: string
-  description: string
-  startsAt: string
-  location: string
-  coverPhotoUrl: string
-  galleryUrls: { value: string }[]
-  birdSpecies: string
-  slug: string
-  priceRubles: string
-  capacity: string
-  totalSpots: string
-  spotsLeft: string
-  days: { clientId: string; dayNumber: string; title: string; description: string }[]
-  guideIds: string[]
-}
+const eventFormSchema = z.object({
+  type: z.enum(['WALK', 'EXPEDITION']),
+  title: z.string().min(1, 'Обязательное поле').max(MAX_EVENT_TITLE, `Максимум ${MAX_EVENT_TITLE} символов`),
+  description: z.string().max(MAX_DESCRIPTION, `Максимум ${MAX_DESCRIPTION} символов`),
+  startsAt: z.string().min(1, 'Обязательное поле'),
+  location: z.string().min(1, 'Обязательное поле').max(MAX_EVENT_LOCATION, `Максимум ${MAX_EVENT_LOCATION} символов`),
+  coverPhotoUrl: z.string().min(1, 'Обязательное поле').url('Введите корректный URL').max(MAX_URL),
+  galleryUrls: z.array(z.object({ value: z.string() })),
+  birdSpecies: z.string(),
+  slug: z.string(),
+  priceRubles: z.string(),
+  capacity: z.string(),
+  totalSpots: z.string(),
+  spotsLeft: z.string(),
+  days: z.array(z.object({
+    clientId: z.string(),
+    dayNumber: z.string(),
+    title: z.string(),
+    description: z.string(),
+  })),
+  guideIds: z.array(z.string()),
+}).superRefine((data, ctx) => {
+  if (data.type === 'WALK') {
+    if (!data.priceRubles.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Обязательное поле', path: ['priceRubles'] })
+    if (!data.capacity.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Обязательное поле', path: ['capacity'] })
+  } else {
+    if (!data.totalSpots.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Обязательное поле', path: ['totalSpots'] })
+    if (data.days.length === 0) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Добавьте хотя бы один день', path: ['days'] })
+    if (data.guideIds.length === 0) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Выберите хотя бы одного гида', path: ['guideIds'] })
+    const total = parseInt(data.totalSpots || '0', 10)
+    const left = parseInt(data.spotsLeft || '0', 10)
+    if (!isNaN(total) && !isNaN(left) && left > total) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Осталось мест не может превышать общее количество мест', path: ['spotsLeft'] })
+    }
+  }
+})
+
+type FormValues = z.infer<typeof eventFormSchema>
 
 const STATUS_LABELS: Record<EventStatus, string> = {
   DRAFT: 'Черновик',
@@ -64,7 +80,7 @@ const STATUS_LABELS: Record<EventStatus, string> = {
 
 export const EventForm = ({ event, guides }: Props) => {
   const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+  const { act, isPending, startTransition } = useAdminAction()
   const [deleteModal, setDeleteModal] = useState(false)
   const [cancelModal, setCancelModal] = useState(false)
   const [restoreModal, setRestoreModal] = useState(false)
@@ -75,6 +91,7 @@ export const EventForm = ({ event, guides }: Props) => {
   const isDeleted = status === 'DELETED'
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(eventFormSchema),
     defaultValues: {
       type: (event?.type ?? 'WALK') as 'WALK' | 'EXPEDITION',
       title: event?.title ?? '',
@@ -135,18 +152,6 @@ export const EventForm = ({ event, guides }: Props) => {
         }),
   })
 
-  const act = (fn: () => Promise<void>, successMsg: string) => {
-    startTransition(async () => {
-      try {
-        await fn()
-        toast.success(successMsg)
-        router.refresh()
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Ошибка')
-      }
-    })
-  }
-
   const onSaveDraft = handleSubmit(async (data) => {
     const input = buildInput(data)
     if (isEdit) {
@@ -190,7 +195,7 @@ export const EventForm = ({ event, guides }: Props) => {
     }
   }
 
-  const ticketCount = (event as EventWithDays & { _count?: { tickets: number } })?._count?.tickets ?? 0
+  const ticketCount = event?._count?.tickets ?? 0
   const canDelete = status === 'DRAFT' || status === 'CANCELLED'
 
   const fieldDisabled = isDeleted || isPending
@@ -254,21 +259,25 @@ export const EventForm = ({ event, guides }: Props) => {
       <div>
         <Label htmlFor="description">Описание</Label>
         <Textarea id="description" {...register('description')} disabled={fieldDisabled} rows={5} />
+        {errors.description && <p className="text-destructive text-sm mt-1">{errors.description.message}</p>}
       </div>
 
       <div>
         <Label htmlFor="startsAt">Дата начала *</Label>
         <Input id="startsAt" type="datetime-local" {...register('startsAt')} disabled={fieldDisabled} />
+        {errors.startsAt && <p className="text-destructive text-sm mt-1">{errors.startsAt.message}</p>}
       </div>
 
       <div>
         <Label htmlFor="location">Место *</Label>
         <Input id="location" {...register('location')} disabled={fieldDisabled} />
+        {errors.location && <p className="text-destructive text-sm mt-1">{errors.location.message}</p>}
       </div>
 
       <div>
         <Label htmlFor="coverPhotoUrl">Обложка (URL) *</Label>
         <Input id="coverPhotoUrl" type="url" {...register('coverPhotoUrl')} disabled={fieldDisabled} />
+        {errors.coverPhotoUrl && <p className="text-destructive text-sm mt-1">{errors.coverPhotoUrl.message}</p>}
       </div>
 
       <div>
@@ -302,10 +311,12 @@ export const EventForm = ({ event, guides }: Props) => {
               <Input id="priceRubles" type="number" min="0" step="0.01" {...register('priceRubles')} disabled={fieldDisabled} className="max-w-xs" />
               <span className="text-sm text-muted-foreground">руб.</span>
             </div>
+            {errors.priceRubles && <p className="text-destructive text-sm mt-1">{errors.priceRubles.message}</p>}
           </div>
           <div>
             <Label htmlFor="capacity">Количество мест *</Label>
             <Input id="capacity" type="number" min="1" {...register('capacity')} disabled={fieldDisabled} className="max-w-xs" />
+            {errors.capacity && <p className="text-destructive text-sm mt-1">{errors.capacity.message}</p>}
           </div>
         </>
       )}
@@ -317,6 +328,7 @@ export const EventForm = ({ event, guides }: Props) => {
             <div>
               <Label htmlFor="totalSpots">Всего мест *</Label>
               <Input id="totalSpots" type="number" min="1" {...register('totalSpots')} disabled={fieldDisabled} className="max-w-[140px]" />
+              {errors.totalSpots && <p className="text-destructive text-sm mt-1">{errors.totalSpots.message}</p>}
             </div>
             <div>
               <Label htmlFor="spotsLeft">Осталось мест *</Label>
@@ -357,6 +369,9 @@ export const EventForm = ({ event, guides }: Props) => {
                 + Добавить день
               </Button>
             </div>
+            {errors.days?.root?.message && (
+              <p className="text-destructive text-sm mt-1">{errors.days.root.message}</p>
+            )}
           </div>
 
           <div>
@@ -379,6 +394,9 @@ export const EventForm = ({ event, guides }: Props) => {
                 </label>
               ))}
             </div>
+            {errors.guideIds?.root?.message && (
+              <p className="text-destructive text-sm mt-1">{errors.guideIds.root.message}</p>
+            )}
           </div>
         </>
       )}

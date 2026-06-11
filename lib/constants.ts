@@ -13,6 +13,7 @@ export const MAX_PROFILE_LINKS = 10
 export const MAX_EXPEDITION_DAYS = 30
 export const MAX_GUIDES_PER_EVENT = 10
 export const MAX_REQUEST_NAME = 100
+export const REQUEST_MESSAGE_PREVIEW = 100
 
 export const PASSWORD_MIN_LENGTH = 8
 export const BCRYPT_COST = 12

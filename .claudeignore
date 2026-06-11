@@ -1,0 +1,4 @@
+context/specs/
+generated/prisma/
+prisma/migrations/
+.idea/

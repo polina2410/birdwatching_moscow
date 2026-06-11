@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { Request, RequestStatus, RequestType, EventStatus } from '@/generated/prisma/client'
+import { REQUEST_MESSAGE_PREVIEW } from '@/lib/constants'
 
 type RequestRow = Request & {
   event: { id: string; title: string; status: EventStatus } | null
@@ -148,7 +149,7 @@ export const RequestsTable = ({ requests, page, totalPages, eventIdFilter }: Pro
               </TableCell>
               <TableCell className="max-w-[200px]">
                 <span className="truncate block text-sm text-muted-foreground">
-                  {req.message.slice(0, 100)}{req.message.length > 100 ? '…' : ''}
+                  {req.message.slice(0, REQUEST_MESSAGE_PREVIEW)}{req.message.length > REQUEST_MESSAGE_PREVIEW ? '…' : ''}
                 </span>
               </TableCell>
               <TableCell>

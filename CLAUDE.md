@@ -47,4 +47,3 @@ pnpm exec vitest run __tests__/hooks/useQuiz.test.ts  # run a single test file
 - Commit messages: imperative mood, under 72 chars
 - Never commit `.env` or secrets
 - Always confirm with the user before destructive git commands
-- Never add `Co-Authored-By` lines to commit messages

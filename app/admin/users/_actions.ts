@@ -68,7 +68,13 @@ export async function unblockUser(targetUserId: string): Promise<void> {
   revalidatePath('/admin/users')
 }
 
-export async function getUserRoleHistory(targetUserId: string) {
+export async function getUserRoleHistory(targetUserId: string): Promise<{
+  id: string
+  fromRole: Role
+  toRole: Role
+  createdAt: Date
+  changedByUser: { name: string; email: string }
+}[]> {
   await requireSuperAdmin()
   return prisma.roleChangeLog.findMany({
     where: { targetUserId },

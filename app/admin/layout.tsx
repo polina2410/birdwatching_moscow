@@ -5,8 +5,9 @@ import { isAdmin, isSuperAdmin } from '@/lib/auth/permissions'
 import { AdminLogoutButton } from '@/components/admin/AdminLogoutButton'
 import { Badge } from '@/components/ui/badge'
 import { Toaster } from '@/components/ui/sonner'
+import type { Role } from '@/generated/prisma/client'
 
-const ROLE_LABELS: Record<string, string> = {
+const ROLE_LABELS: Record<Role, string> = {
   USER: 'Пользователь',
   ADMIN: 'Админ',
   SUPERADMIN: 'Суперадмин',
@@ -24,7 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="p-4 border-b">
           <p className="font-semibold text-sm">Birdwatching Moscow</p>
           <p className="text-xs text-muted-foreground mt-1 truncate">{name}</p>
-          <Badge variant="secondary" className="mt-1 text-xs">{ROLE_LABELS[role] ?? role}</Badge>
+          <Badge variant="secondary" className="mt-1 text-xs">{ROLE_LABELS[role]}</Badge>
         </div>
         <nav className="flex-1 p-2 space-y-1">
           <Link href="/admin/events" className="flex items-center rounded-md px-3 py-2 text-sm hover:bg-accent">

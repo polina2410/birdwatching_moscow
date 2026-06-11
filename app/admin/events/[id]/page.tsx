@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/auth/requireAdmin'
 import { notFound } from 'next/navigation'
 import { EventForm } from '@/components/admin/EventForm'
 import Link from 'next/link'
@@ -6,12 +7,13 @@ import Link from 'next/link'
 type Props = { params: Promise<{ id: string }> }
 
 export default async function EditEventPage({ params }: Props) {
+  await requireAdmin()
   const { id } = await params
 
   const [event, guides, requestCount] = await Promise.all([
     prisma.event.findUnique({
       where: { id },
-      include: { days: { orderBy: { dayNumber: 'asc' } }, guides: { select: { id: true } } },
+      include: { days: { orderBy: { dayNumber: 'asc' } }, guides: { select: { id: true } }, _count: { select: { tickets: true } } },
     }),
     prisma.teamMember.findMany({ orderBy: { sortOrder: 'asc' }, select: { id: true, name: true } }),
     prisma.request.count({ where: { eventId: id } }),

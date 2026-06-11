@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/auth/requireAdmin'
 import Link from 'next/link'
 import { EventsTable } from '@/components/admin/EventsTable'
 import { buttonVariants } from '@/components/ui/button'
@@ -11,6 +12,7 @@ type Props = {
 }
 
 export default async function AdminEventsPage({ searchParams }: Props) {
+  await requireAdmin()
   const params = await searchParams
   const page = Math.max(1, Number(params.page ?? 1))
   const status = params.status as EventStatus | undefined

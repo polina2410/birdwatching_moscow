@@ -7,7 +7,3 @@ export function isAdmin(role: Role): boolean {
 export function isSuperAdmin(role: Role): boolean {
   return role === 'SUPERADMIN'
 }
-
-export function canManageRoles(role: Role): boolean {
-  return role === 'SUPERADMIN'
-}

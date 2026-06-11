@@ -1,35 +1,21 @@
 'use server'
 
-import { auth } from '@/lib/auth'
-import { isAdmin } from '@/lib/auth/permissions'
+import { requireAdmin } from '@/lib/auth/requireAdmin'
+import { generateSlug } from '@/lib/utils'
 import { prisma } from '@/lib/prisma'
 import { createEventSchema, updateEventSchema, type CreateEventInput, type UpdateEventInput } from '@/lib/validation/admin'
 import { revalidatePath } from 'next/cache'
 import { format } from 'date-fns'
 
-async function requireAdmin() {
-  const session = await auth()
-  if (!session?.user || !isAdmin(session.user.role)) throw new Error('Forbidden')
-  return session.user
-}
-
-function generateSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .slice(0, 180)
-}
-
 async function ensureUniqueSlug(base: string): Promise<string> {
   const existing = await prisma.event.findFirst({ where: { slug: base } })
   if (!existing) return base
-  const suffix = Math.random().toString(16).slice(2, 6)
-  const candidate = `${base.slice(0, 175)}-${suffix}`
-  const conflict = await prisma.event.findFirst({ where: { slug: candidate } })
-  return conflict ? `${base.slice(0, 175)}-${Math.random().toString(16).slice(2, 6)}` : candidate
+  for (let i = 0; i < 5; i++) {
+    const candidate = `${base.slice(0, 191)}-${crypto.randomUUID().slice(0, 8)}`
+    const conflict = await prisma.event.findFirst({ where: { slug: candidate } })
+    if (!conflict) return candidate
+  }
+  throw new Error('Не удалось сгенерировать уникальный slug. Попробуйте изменить название события.')
 }
 
 export async function createEvent(
@@ -41,6 +27,9 @@ export async function createEvent(
   if (!parsed.success) throw new Error('Validation failed')
 
   const data = parsed.data
+  if (data.type === 'EXPEDITION' && data.spotsLeft > data.totalSpots) {
+    throw new Error('Осталось мест не может превышать общее количество мест')
+  }
   const baseSlug = data.slug || generateSlug(data.title)
   const slug = await ensureUniqueSlug(baseSlug)
 
@@ -96,6 +85,9 @@ export async function updateEvent(id: string, input: UpdateEventInput): Promise<
   if (!parsed.success) throw new Error('Validation failed')
 
   const data = parsed.data
+  if (data.type === 'EXPEDITION' && data.spotsLeft > data.totalSpots) {
+    throw new Error('Осталось мест не может превышать общее количество мест')
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.event.update({

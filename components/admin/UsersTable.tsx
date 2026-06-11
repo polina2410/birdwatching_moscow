@@ -1,20 +1,20 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useTransition, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { changeUserRole, blockUser, unblockUser, getUserRoleHistory } from '@/app/admin/users/_actions'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { buttonVariants } from '@/components/ui/button'
 import { useDebounce } from '@/lib/useDebounce'
+import { useAdminAction } from '@/hooks/useAdminAction'
 import type { Role } from '@/generated/prisma/client'
 
 type UserRow = {
@@ -49,7 +49,7 @@ export const UsersTable = ({ users, page, totalPages }: Props) => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [isPending, startTransition] = useTransition()
+  const { act, isPending } = useAdminAction()
 
   const [roleModal, setRoleModal] = useState<{ user: UserRow; newRole: Role } | null>(null)
   const [blockModal, setBlockModal] = useState<UserRow | null>(null)
@@ -68,20 +68,10 @@ export const UsersTable = ({ users, page, totalPages }: Props) => {
     router.push(`${pathname}?${sp.toString()}`)
   }
 
-  const prevSearch = searchParams.get('search') ?? ''
-  if (debouncedSearch !== prevSearch) updateParam('search', debouncedSearch)
-
-  const act = (fn: () => Promise<void>, successMsg: string) => {
-    startTransition(async () => {
-      try {
-        await fn()
-        toast.success(successMsg)
-        router.refresh()
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Ошибка')
-      }
-    })
-  }
+  useEffect(() => {
+    const prevSearch = searchParams.get('search') ?? ''
+    if (debouncedSearch !== prevSearch) updateParam('search', debouncedSearch)
+  }, [debouncedSearch]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openHistory = async (user: UserRow) => {
     try {

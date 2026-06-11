@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useTransition, useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -17,6 +17,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useDebounce } from '@/lib/useDebounce'
+import { useAdminAction } from '@/hooks/useAdminAction'
 import type { EventStatus, EventType } from '@/generated/prisma/client'
 
 type EventRow = {
@@ -55,7 +56,7 @@ export const EventsTable = ({
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [isPending, startTransition] = useTransition()
+  const { act, isPending } = useAdminAction()
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null)
   const [cancelTarget, setCancelTarget] = useState<{ id: string; title: string } | null>(null)
   const [restoreModal, setRestoreModal] = useState<RestoreModalState>({ open: false })
@@ -80,21 +81,10 @@ export const EventsTable = ({
     router.push(`${pathname}?${sp.toString()}`)
   }
 
-  // Sync debounced search to URL
-  const prevSearch = useSearchParams().get('search') ?? ''
-  if (debouncedSearch !== prevSearch) updateParam('search', debouncedSearch)
-
-  const act = (fn: () => Promise<void>, successMsg: string) => {
-    startTransition(async () => {
-      try {
-        await fn()
-        toast.success(successMsg)
-        router.refresh()
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Ошибка')
-      }
-    })
-  }
+  useEffect(() => {
+    const prevSearch = searchParams.get('search') ?? ''
+    if (debouncedSearch !== prevSearch) updateParam('search', debouncedSearch)
+  }, [debouncedSearch]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRestore = (ev: EventRow) => {
     if (new Date(ev.startsAt) < new Date()) {
@@ -108,7 +98,7 @@ export const EventsTable = ({
   const confirmRestore = () => {
     if (!restoreModal.open || !newStartsAt) return
     const id = restoreModal.id
-    act(() => restoreEvent(id, newStartsAt), 'Восстановлено')
+    act(() => restoreEvent(id, new Date(newStartsAt).toISOString()), 'Восстановлено')
     setRestoreModal({ open: false })
   }
 
