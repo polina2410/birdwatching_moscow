@@ -53,3 +53,25 @@ Implemented the full Prisma data layer. Schema covers all entities with proper r
 ### Summary
 
 Implemented full email + password auth on Auth.js v5. Split config pattern used: edge-compatible `auth.config.ts` for `proxy.ts`, full Node.js config in `lib/auth.ts` with Prisma + bcrypt. Password reset uses SHA-256 hashed tokens stored in a separate `PasswordResetToken` table — raw token goes only in the email link. All email lookups filter `deletedAt: null` to handle soft-deleted accounts correctly. UI is minimal forms only; design comes later.
+
+---
+
+## Admin Panel CRUD
+
+**Branch:** admin-panel-crud
+**Completed:** 2026-06-11
+
+### Goals
+
+- `SUPERADMIN` role, middleware updates, `lib/auth/permissions.ts` helpers
+- Admin shell layout: sidebar, role badge, logout
+- Events CRUD: list with filters/search/pagination, create, edit, publish/cancel/restore/delete
+- Team CRUD: list, create, edit (deletion blocked if linked to events)
+- Requests list: filters, row-click detail modal, status toggle (NEW ↔ WAITLIST)
+- Users list (SUPERADMIN only): role change, block/unblock, role history modal
+- shadcn/ui installed; all Zod validation with inline errors; success toasts
+- Schema migrations: SUPERADMIN role, RoleChangeLog, RequestStatus, blockedAt
+
+### Summary
+
+Full admin panel built with Next.js App Router Server Actions. Four sections covering events, team, requests, and users. Events support full lifecycle management including slug auto-generation, expedition days, guide assignment, and ticket-aware delete guard. Users section is SUPERADMIN-gated with transactional role changes logged to RoleChangeLog. Auth guards added per-page (defense-in-depth on top of layout). `useAdminAction` hook extracts shared server-action pattern. `ensureUniqueSlug` uses crypto.randomUUID with retry loop. Cross-field `spotsLeft <= totalSpots` validation on both client and server.
