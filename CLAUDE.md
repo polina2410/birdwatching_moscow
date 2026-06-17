@@ -18,8 +18,16 @@ pnpm exec vitest run __tests__/hooks/useQuiz.test.ts  # run a single test file
 - Always use TypeScript — no `any` types, use `unknown` or proper generics
 - Prefer named exports over default exports
 - Use `const` arrow functions for components
-- Styles via CSS Modules (`.module.css`) — no inline styles, no global class strings
 - No magic numbers — extract named constants
+
+### Frontend
+
+- Styles via plain CSS or CSS Modules (`.module.css`) — no inline styles
+- **Mobile-first** — write base styles for mobile, layer up with `min-width` media queries; never start from desktop and override down
+- **Prefer CSS over JS** — implement visual behavior (layout, animation, transitions, hover/focus states, show/hide, responsive) with CSS where the feature has solid support in modern Chrome, Safari, and Yandex Browser; only use JS/Framer Motion when CSS cannot express the behavior or browser support is insufficient
+- No prop drilling beyond 2 levels — use context or TanStack Query state
+- HTTP calls only via Axios instances in a dedicated `api/` layer
+- One component per file
 
 ## Architecture
 
@@ -31,6 +39,15 @@ pnpm exec vitest run __tests__/hooks/useQuiz.test.ts  # run a single test file
 - TypeScript types in `types/`
 - One component per file
 - No prop drilling beyond 2 levels — use context or lift state
+
+## Infrastructure
+
+Deployed on **Selectel VPS** (not Vercel/serverless). Implications:
+
+- No function timeout constraints — long-running server tasks are fine
+- **Ticket concurrency** — wrap purchases in Prisma transactions with row-level locks to prevent double-booking under simultaneous requests
+- **Certificate generation (stage 2)** — implement as a background job queue (e.g. BullMQ + Redis) running as a separate process on the same VPS; do not block the HTTP response
+- **Auth** — database sessions via NextAuth.js v5 (Auth.js) with the Prisma adapter (`strategy: "database"`); sessions stored in PostgreSQL for instant revocation; secrets in `.env` only, never committed
 
 ## Testing
 

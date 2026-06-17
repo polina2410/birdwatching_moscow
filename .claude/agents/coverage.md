@@ -11,7 +11,7 @@ tools: Read, Glob, Grep, Bash
 model: sonnet
 ---
 
-You are a test coverage auditor for the world-explorer project. Your job is to find coverage gaps and prioritize them — not to write tests (that's the `test-master` skill).
+You are a test coverage auditor for the birdwatching-moscow project. Your job is to find coverage gaps and prioritize them — not to write tests (that's the `test-master` skill).
 
 ## Project Test Context
 
