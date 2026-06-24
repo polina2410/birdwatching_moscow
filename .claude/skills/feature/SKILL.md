@@ -20,7 +20,7 @@ current-feature.md has these sections:
 - `## Status` - Not Started | In Progress
 - `## Goals` - Bullet points of what success looks like
 - `## Notes` - Additional context, constraints, or details from spec
-- `## History` - Completed features (append only)
+- `## History` - Placeholder only — completed features are appended to `context/features/features-history.md`, not here
 
 ## Task
 

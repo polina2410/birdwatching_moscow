@@ -5,7 +5,7 @@ description: >
   idea or story and produces a ready-to-implement spec.md. Never writes application code or
   creates branches. Trigger words: analyze requirements, plan this feature, acceptance
   criteria, break down this task, what should this feature do, define the scope, technical
-  specification.
+  specification. Does NOT write user stories — that is the human's responsibility.
 tools: Read, Grep, Glob, Write, Edit
 model: sonnet
 ---
@@ -21,6 +21,8 @@ The human provides the requirements — as a verbal description in chat, or as a
 ## Output Target
 
 Write one artefact: `context/specs/<feature-name>/spec.md`
+
+**Deriving `<feature-name>`:** use a short, lowercase, kebab-case slug that captures the core of the feature (e.g. "Add event signup form" → `event-signup`, "User authentication" → `auth`). If the human already has a `story.md` in a named directory, use that directory name exactly.
 
 Create the directory if it doesn't exist. Stop after writing and wait for human approval — this is **Gate 1**.
 

@@ -8,7 +8,7 @@ This project uses **Spec-Driven Development (SDD)** with **Test-Driven Developme
 
 **User story → Spec → TDD per task → Validate against spec**
 
-Plan first, code second. Review happens at **phase gates**, not on every edit. Do not jump to implementation when a feature is non-trivial — stop at each gate and wait for explicit human approval before proceeding.
+Spec first, code second. Review happens at **phase gates**, not on every edit. Do not jump to implementation when a feature is non-trivial — stop at each gate and wait for explicit human approval before proceeding.
 
 ### When to apply the full flow
 
@@ -20,7 +20,7 @@ When in doubt, ask which mode applies before starting.
 
 ## Spec-Driven Development (SDD)
 
-Specs are the source of truth. Code follows the plan; the plan follows the spec; the spec follows the story.
+Specs are the source of truth. Code follows the spec; the spec follows the story.
 
 ### Where artefacts live
 
@@ -64,7 +64,7 @@ Acceptance criteria:
 
 ## Test-Driven Development (TDD)
 
-TDD is **mandatory** during implementation. Claude tends to write implementation first and sometimes edits tests to make them pass — both are forbidden here. Follow this exact cycle for each task in the plan:
+TDD is **mandatory** during implementation. Claude tends to write implementation first and sometimes edits tests to make them pass — both are forbidden here. Follow this exact cycle for each goal in the spec:
 
 ### The cycle (RED → GREEN → REFACTOR)
 

@@ -22,11 +22,11 @@ Assumes `/feature start` has already run: failing tests exist and are committed.
 
 ## Validate
 
-12. Read `context/specs/<feature-name>/spec.md` — for every acceptance criterion, identify the test that proves it
+12. Extract the feature name from `current-feature.md` H1 (e.g. `# Current Feature: signup-form` → `signup-form`). Read `context/specs/<feature-name>/spec.md` — find the **Success criteria** section and map each criterion to the test that proves it
 13. Output a validation table:
 
-| Acceptance criterion | Test file | Status |
-|----------------------|-----------|--------|
+| Success criterion | Test file | Status |
+|-------------------|-----------|--------|
 | `<criterion>` | `__tests__/...` | ✅ / ❌ |
 
 14. If any criterion has no corresponding test, raise it with the human — do not mark the feature done until every criterion is covered

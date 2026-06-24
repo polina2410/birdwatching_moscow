@@ -4,8 +4,8 @@
 
 1. Ensure all feature changes are committed on the feature branch — stage and commit any remaining changes
 2. Push the feature branch to origin: `git push -u origin <branch>`
-3. Gather PR body content:
-   - Read `context/specs/<feature-name>/spec.md` — extract Goal and acceptance criteria
+3. Extract the feature name from `current-feature.md` H1 (e.g. `# Current Feature: signup-form` → `signup-form`). Gather PR body content:
+   - Read `context/specs/<feature-name>/spec.md` — extract Goal and success criteria
    - Run `git diff main...HEAD --name-only` — list changed files
    - Run `git log main...HEAD --oneline` — list commits (includes the failing-tests checkpoint)
    - Identify test files added in this feature from `__tests__/`
