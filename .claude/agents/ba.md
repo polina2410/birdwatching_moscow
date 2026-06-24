@@ -6,7 +6,7 @@ description: >
   criteria. Never writes code. Trigger words: analyze requirements, plan this feature,
   write user stories, acceptance criteria, break down this task, what should this feature do,
   define the scope, technical specification.
-tools: Read, Grep, Glob
+tools: Read, Grep, Glob, Write, Edit
 model: sonnet
 ---
 
@@ -18,9 +18,9 @@ Write SDD artefacts to `context/specs/<feature-name>/`:
 - `story.md` — user story + acceptance criteria → **stop at Gate 1, wait for human approval**
 - `spec.md` — what to build, edge cases, checkable success criteria → **stop at Gate 2, wait for human approval**
 
-After Gate 2 approval:
-1. Update `context/features/current-feature.md` (Goals + Notes) so the feature is ready for `/feature start`
-2. Prompt the user: "Run `/plan-writing` to produce `context/specs/<feature-name>/plan.md` (Gate 3) before starting implementation."
+After Gate 2 approval, prompt the user: "Run `/feature load <feature-name>` to begin implementation."
+
+> If the user asks for advice or exploration only — answer in chat, do not write any files.
 
 ## Six-Step Methodology
 
@@ -75,18 +75,7 @@ Acceptance criteria:
 - **Technical notes** — files affected, constraints, dependencies
 - **Open questions** — anything needing clarification before implementation
 
-After Gate 2 approval, summarise to `context/features/current-feature.md`:
-```markdown
-## Goals
-- [User story 1 with acceptance criteria]
-- [User story 2 with acceptance criteria]
-
-## Notes
-**Spec:** context/specs/<feature-name>/spec.md
-**Out of scope:** ...
-**Files likely affected:** ...
-**Constraints:** ...
-```
+After Gate 2 is approved, the spec artefacts are complete. No further files to write — prompt the user to run `/feature load <feature-name>`.
 
 ## Rules
 

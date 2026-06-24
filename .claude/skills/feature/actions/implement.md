@@ -19,3 +19,14 @@ Assumes `/feature start` has already run: failing tests exist and are committed.
 9. If the feature touches interactive elements, forms, or navigation — use the `a11y` agent to audit keyboard navigation and ARIA patterns
 10. If the feature adds or modifies any file in `app/api/` — use the `api` agent to verify route design, error shapes, and Zod validation
 11. Only report the feature as done when all checks pass
+
+## Validate
+
+12. Read `context/specs/<feature-name>/spec.md` — for every acceptance criterion, identify the test that proves it
+13. Output a validation table:
+
+| Acceptance criterion | Test file | Status |
+|----------------------|-----------|--------|
+| `<criterion>` | `__tests__/...` | ✅ / ❌ |
+
+14. If any criterion has no corresponding test, raise it with the human — do not mark the feature done until every criterion is covered

@@ -22,21 +22,19 @@ Write a plan for: $ARGUMENTS
 - **Max 1 page** — if it's longer, simplify
 - **5–10 tasks** — no more, no fewer
 - Each task must have a **concrete action** and a **verifiable outcome**
-- If a feature is active: save to `context/specs/<feature-name>/plan.md`
-- Otherwise (bug fix, refactor, etc.): save to `context/plans/{task-slug}.md`
+- Save the plan to `context/plans/{task-slug}.md`
 - Update checkboxes as work progresses
 
 ---
 
 ## Process
 
-1. Understand the goal — read `context/features/current-feature.md` if a feature is active
-2. Read `context/specs/<feature-name>/spec.md` — acceptance criteria become the test targets
-3. Identify affected files (read them before writing the plan)
-4. Break work into 5–10 sequential tasks; each implementable task must include a failing-tests step before the implementation step (see TDD pattern below)
+1. Understand the goal from $ARGUMENTS
+2. Identify affected files (read them before writing the plan)
+3. Break work into 5–10 sequential tasks; each implementable task must include a failing-tests step before the implementation step (see TDD pattern below)
 5. Write the plan using the format below
-6. Save to `context/specs/<feature-name>/plan.md` if a feature is active, otherwise `context/plans/{task-slug}.md`
-7. Show a summary and ask for approval before starting — this is **Gate 3** in the SDD flow
+6. Save to `context/plans/{task-slug}.md`
+7. Show a summary and ask for approval before starting
 
 ---
 

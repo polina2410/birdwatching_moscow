@@ -28,7 +28,6 @@ Specs are the source of truth. Code follows the plan; the plan follows the spec;
 context/specs/<feature-name>/
   story.md    # user story + acceptance criteria
   spec.md     # what to build, edge cases, checkable success criteria
-  plan.md     # numbered, ordered implementation tasks
 ```
 
 `<feature-name>` is `kebab-case` and matches the branch name.
@@ -37,9 +36,8 @@ context/specs/<feature-name>/
 
 1. **Story** — write/confirm `story.md`. → **Gate 1**
 2. **Spec** — write `spec.md` from the story. → **Gate 2**
-3. **Plan** — break the spec into numbered tasks in `plan.md`. → **Gate 3**
-4. **Implement** — work the plan one task at a time using the TDD cycle below. Human reviews per task or per logical group, not per edit.
-5. **Validate** — confirm the implementation satisfies every acceptance criterion in the spec. Report which criteria are met and how (which test proves each).
+3. **Implement** — TDD cycle driven by the spec's acceptance criteria. Human reviews committed failing tests before implementation begins.
+4. **Validate** — confirm the implementation satisfies every acceptance criterion in the spec. Report which criteria are met and how (which test proves each).
 
 Do not silently advance past a gate. Present the artefact, then wait.
 

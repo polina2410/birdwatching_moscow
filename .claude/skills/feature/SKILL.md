@@ -17,7 +17,7 @@ Manages the full lifecycle of a feature from spec to merge.
 current-feature.md has these sections:
 
 - `# Current Feature` - H1 heading with feature name when active
-- `## Status` - Not Started | In Progress | Complete
+- `## Status` - Not Started | In Progress
 - `## Goals` - Bullet points of what success looks like
 - `## Notes` - Additional context, constraints, or details from spec
 - `## History` - Completed features (append only)
