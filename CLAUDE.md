@@ -26,18 +26,17 @@ Specs are the source of truth. Code follows the plan; the plan follows the spec;
 
 ```
 context/specs/<feature-name>/
-  story.md    # user story + acceptance criteria
-  spec.md     # what to build, edge cases, checkable success criteria
+  story.md    # (optional) human-written user story + acceptance criteria
+  spec.md     # produced by the BA agent — what to build, edge cases, success criteria
 ```
 
 `<feature-name>` is `kebab-case` and matches the branch name.
 
 ### Phase gates (STOP for human approval at each →)
 
-1. **Story** — write/confirm `story.md`. → **Gate 1**
-2. **Spec** — write `spec.md` from the story. → **Gate 2**
-3. **Implement** — TDD cycle driven by the spec's acceptance criteria. Human reviews committed failing tests before implementation begins.
-4. **Validate** — confirm the implementation satisfies every acceptance criterion in the spec. Report which criteria are met and how (which test proves each).
+1. **Spec** — human describes requirements; BA agent produces `spec.md`. → **Gate 1**
+2. **Implement** — TDD cycle driven by spec success criteria. Human reviews committed failing tests before implementation begins.
+3. **Validate** — confirm every success criterion in the spec is covered by a passing test.
 
 Do not silently advance past a gate. Present the artefact, then wait.
 
@@ -49,7 +48,7 @@ Do not silently advance past a gate. Present the artefact, then wait.
 
 ## User Stories
 
-Every feature starts from a story in `story.md`:
+The human provides the story — verbally or as `context/specs/<feature-name>/story.md`. The BA agent reads it and produces `spec.md`. Story format if written:
 
 ```
 As a <role>, I want <capability>, so that <benefit>.
