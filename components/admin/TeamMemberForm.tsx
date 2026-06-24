@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import type { TeamMember } from '@/generated/prisma/client'
-import { MAX_NAME, MAX_URL, MAX_DESCRIPTION, MAX_PROFILE_LINKS } from '@/lib/constants'
+import { MAX_NAME, MAX_DESCRIPTION, MAX_PROFILE_LINKS } from '@/lib/constants'
 
 const teamMemberFormSchema = z.object({
   name: z.string().min(1, 'Обязательное поле').max(MAX_NAME, `Максимум ${MAX_NAME} символов`),

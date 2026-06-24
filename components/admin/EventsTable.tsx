@@ -3,7 +3,6 @@
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { cancelEvent, deleteEvent, publishEvent, restoreEvent } from '@/app/admin/events/_actions'
