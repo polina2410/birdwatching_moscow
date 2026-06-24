@@ -35,6 +35,8 @@ jobs:
 
       - name: Generate Prisma client
         run: pnpm exec prisma generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
 
       - name: Lint
         run: pnpm lint
