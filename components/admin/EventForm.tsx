@@ -99,7 +99,7 @@ export const EventForm = ({ event, guides }: Props) => {
       startsAt: event?.startsAt ? toDatetimeLocal(event.startsAt) : '',
       location: event?.location ?? '',
       coverPhotoUrl: event?.coverPhotoUrl ?? '',
-      galleryUrls: (event?.galleryUrls ?? []).map((v) => ({ value: v })),
+      galleryUrls: (event?.galleryUrls ?? []).map((v: string) => ({ value: v })),
       birdSpecies: (event?.birdSpecies ?? []).join(', '),
       slug: event?.slug ?? '',
       priceRubles: event?.priceKopecks != null ? String(event.priceKopecks / 100) : '',

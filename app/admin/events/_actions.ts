@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { createEventSchema, updateEventSchema, type CreateEventInput, type UpdateEventInput } from '@/lib/validation/admin'
 import { revalidatePath } from 'next/cache'
 import { format } from 'date-fns'
+import type { Prisma } from '@/generated/prisma/client'
 
 async function ensureUniqueSlug(base: string): Promise<string> {
   const existing = await prisma.event.findFirst({ where: { slug: base } })
@@ -38,7 +39,7 @@ export async function createEvent(
     ? { status: 'ACTIVE' as const, publishedAt: now, publishedBy: user.id }
     : { status: 'DRAFT' as const }
 
-  const event = await prisma.$transaction(async (tx) => {
+  const event = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const ev = await tx.event.create({
       data: {
         type: data.type,
@@ -89,7 +90,7 @@ export async function updateEvent(id: string, input: UpdateEventInput): Promise<
     throw new Error('Осталось мест не может превышать общее количество мест')
   }
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.event.update({
       where: { id },
       data: {
