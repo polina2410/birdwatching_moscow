@@ -30,3 +30,5 @@ Assumes `/feature start` has already run: failing tests exist and are committed.
 | `<criterion>` | `__tests__/...` | ✅ / ❌ |
 
 14. If any criterion has no corresponding test, raise it with the human — do not mark the feature done until every criterion is covered
+
+**Next step:** run `/feature test` to fill any coverage gaps.

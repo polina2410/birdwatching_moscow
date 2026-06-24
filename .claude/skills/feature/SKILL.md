@@ -1,6 +1,6 @@
 ---
 name: feature
-description: Manage current feature workflow - start, implement, explain (optional) or complete
+description: Manage current feature workflow - load, start, implement, test, explain (optional) or complete
 argument-hint: load|start|implement|test|explain|complete
 ---
 

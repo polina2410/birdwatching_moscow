@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This project uses **Spec-Driven Development (SDD)** with **Test-Driven Development (TDD)** during implementation. The operating model is:
 
-**User story → Spec → Plan → TDD per task → Validate against spec**
+**User story → Spec → TDD per task → Validate against spec**
 
 Plan first, code second. Review happens at **phase gates**, not on every edit. Do not jump to implementation when a feature is non-trivial — stop at each gate and wait for explicit human approval before proceeding.
 

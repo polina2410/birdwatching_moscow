@@ -4,7 +4,7 @@
 2. If empty, error: "Run /feature load first"
 3. Read `context/specs/<feature-name>/spec.md` if it exists — acceptance criteria are the test targets
 4. Set Status to "In Progress"
-5. Create and checkout the feature branch (derive name from H1 heading)
+5. Create and checkout the feature branch using the feature name from the H1 heading — the H1 is set by `/feature load` to match the spec directory name, so the branch will be `kebab-case` of that name (e.g. `# Current Feature: signup-form` → branch `signup-form`)
 6. State explicitly: "Writing tests for [feature]. Not writing any implementation yet."
 7. Write failing tests for all goals, derived from the spec acceptance criteria
 8. Run `pnpm test:run` — confirm every new test is **red**. A test that passes before any implementation is broken — fix it before continuing

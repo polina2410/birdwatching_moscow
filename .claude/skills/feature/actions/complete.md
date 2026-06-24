@@ -50,7 +50,7 @@ EOF
    - Change H1 back to `# Current Feature`
    - Clear Goals and Notes sections (keep placeholder comments)
    - Status back to "Not Started"
-9. Add a one-line summary of the feature to the END of `context/features/features-history.md`
+9. Add a one-line summary to the END of `context/features/features-history.md` — use the PR title or the Goal line from `context/specs/<feature-name>/spec.md`
 10. Commit: `git commit -m "chore: reset current-feature.md after completing <feature>"`
 11. Push main: `git push`
 12. If the feature branch still exists on origin: `git push origin --delete <branch>`

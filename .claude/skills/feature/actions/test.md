@@ -8,3 +8,5 @@
     - Do not write tests just to write them. Use your best judgment
 4. Run `pnpm test:run` to verify all tests pass
 5. Commit the new tests as a checkpoint: `git commit -m "test: coverage tests for <feature-name>"`
+
+**Next step:** run `/feature complete` to create the PR.
