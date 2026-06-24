@@ -44,7 +44,7 @@ Do not silently advance past a gate. Present the artefact, then wait.
 
 - Success criteria MUST be **checkable**, not interpretable. Good: "`pnpm test:run` passes", "endpoint returns 200 with `{ id }`", "double-booking under 50 concurrent requests is impossible". Bad: "clean code", "good performance", "works well".
 - Every spec lists explicit **edge cases** and **error cases**, not just the happy path.
-- A spec is not done until each acceptance criterion can be mapped to at least one planned test.
+- A spec is not done until each success criterion can be mapped to at least one test.
 
 ## User Stories
 
@@ -73,7 +73,7 @@ TDD is **mandatory** during implementation. Claude tends to write implementation
 
 ### The cycle (RED → GREEN → REFACTOR)
 
-1. **Write failing tests first.** State explicitly: "Writing tests for X. Not writing the implementation yet." Derive the tests from the spec's acceptance criteria.
+1. **Write failing tests first.** State explicitly: "Writing tests for X. Not writing the implementation yet." Derive the tests from the spec's success criteria.
 2. **Run them and confirm they fail** (`pnpm test:run`). A test that passes before any implementation is a broken test — fix it.
 3. **Commit the failing tests as a checkpoint** before writing implementation, e.g. `git commit -m "test: failing tests for <feature>"`. This is the safety net: if tests later change, the diff shows exactly what changed and the work can be reverted.
 4. **Implement until green.** Write the minimum code to pass the current tests. **Do not modify the tests** to make them pass — fix the implementation. Keep going until all tests pass.
@@ -96,6 +96,7 @@ pnpm build           # Production build
 pnpm lint            # Run ESLint
 pnpm test            # Run Vitest in watch mode
 pnpm test:run        # Run Vitest once (CI)
+pnpm test:coverage   # Run Vitest with V8 coverage report
 pnpm exec vitest run __tests__/lib/utils.test.ts  # run a single test file
 ```
 
@@ -144,7 +145,7 @@ Deployed on **Selectel VPS** (not Vercel/serverless). Implications:
 - Tests live in `__tests__/`
 - Use Vitest + Testing Library
 - Test custom hooks and utils, and behaviour — not component internals
-- Each acceptance criterion in the spec maps to at least one test
+- Each success criterion in the spec maps to at least one test
 - Always test happy path + at least one error case
 - Run `pnpm test:run` before marking any work complete
 

@@ -19,7 +19,7 @@ gh pr create --title "<feature name>" --body "$(cat <<'EOF'
 ## Spec
 `context/specs/<feature-name>/spec.md`
 
-## Acceptance criteria
+## Success criteria
 - [ ] <criterion 1 from spec>
 - [ ] <criterion 2 from spec>
 - [ ] <edge/error case from spec>

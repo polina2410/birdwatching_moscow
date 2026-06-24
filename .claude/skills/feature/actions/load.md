@@ -2,6 +2,7 @@
 
 1. Check $ARGUMENTS (after "load"):
     - If it looks like a feature name (single word or kebab-case, no spaces): look for `context/specs/{name}/spec.md`
+        - If the file does not exist: error — "No spec found at context/specs/{name}/spec.md. Run the BA agent first, or use an inline description: /feature load <description>"
     - If it's multiple words: use as inline feature description, generate goals directly
     - If empty: error — "load" requires a spec name or inline feature description
 

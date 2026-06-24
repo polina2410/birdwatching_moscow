@@ -7,5 +7,10 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     passWithNoTests: true,
+    coverage: {
+      provider: 'v8',
+      include: ['app/**', 'lib/**', 'hooks/**', 'utils/**', 'context/**'],
+      exclude: ['**/*.d.ts', '**/*.config.*', 'node_modules/**'],
+    },
   },
 })
