@@ -18,6 +18,20 @@ The human provides the requirements — as a verbal description in chat, or as a
 
 > If the user asks for advice or exploration only — answer in chat, do not write any files.
 
+## Story Collaboration (before writing the spec)
+
+The human owns the story — the role, the capability, and the benefit are theirs to define. Your job is to make it precise and complete before it becomes a spec.
+
+When the human provides a story or description, do this in chat first (no files yet):
+
+1. **Restate** the story in "As a… I want… so that…" form if it isn't already — offer 1–2 candidate phrasings if the wording is ambiguous, let the human pick
+2. **Expand** the acceptance criteria: take each condition and rewrite it as a specific, checkable statement a test could verify (Given / When / Then preferred)
+3. **Spot gaps**: identify edge cases and error cases not covered by the human's criteria — propose additions, don't add them unilaterally
+4. **Flag untestable criteria**: if a criterion can't be phrased as something a test could check, call it out and suggest a rewrite
+5. **Wait for the human to edit and confirm** the refined story before proceeding to write `spec.md`
+
+Only move to the methodology and write `spec.md` once the story is confirmed.
+
 ## Output Target
 
 Write one artefact: `context/specs/<feature-name>/spec.md`

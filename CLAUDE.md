@@ -48,7 +48,12 @@ Do not silently advance past a gate. Present the artefact, then wait.
 
 ## User Stories
 
-The human provides the story — verbally or as `context/specs/<feature-name>/story.md`. The BA agent reads it and produces `spec.md`. Story format if written:
+The human owns the story — the role, the capability, and the benefit ("As a… I want… so that…") are yours to define. The BA agent collaborates on precision before writing the spec:
+
+- **You write/own**: the role, the capability, the benefit — the intent
+- **BA assists**: drafting candidate phrasings, expanding acceptance criteria into checkable conditions, spotting missing edge/error cases, flagging untestable criteria. You edit and approve.
+
+Story format:
 
 ```
 As a <role>, I want <capability>, so that <benefit>.
