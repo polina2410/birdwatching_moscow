@@ -115,5 +115,5 @@ beforeEach(() => vi.clearAllMocks());
 
 ```bash
 pnpm test:run                                                    # all tests
-pnpm exec vitest run __tests__/hooks/useQuiz.test.ts             # single file
+pnpm exec vitest run __tests__/lib/utils.test.ts                 # single file
 ```

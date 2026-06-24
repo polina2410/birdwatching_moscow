@@ -31,7 +31,7 @@ You are a UI/UX reviewer. Use Playwright to view pages and evaluate:
 - Alt text on images
 - Clickable element sizes
 - Focus states visible
-- Color not sole indicator
+- Colour not sole indicator
 
 ### Marketing Specific
 

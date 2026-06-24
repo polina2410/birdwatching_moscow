@@ -1,17 +1,12 @@
 # Start Action
 
-1. Read current-feature.md - verify Goals are populated
+1. Read `context/features/current-feature.md` — verify Goals are populated
 2. If empty, error: "Run /feature load first"
-3. Set Status to "In Progress"
-4. Create and checkout the feature branch (derive name from H1 heading)
-5. List the goals, then implement them one by one
-
-## Quality Gate (run after all goals implemented)
-
-6. Run `pnpm lint` — fix any errors before continuing
-7. Run `pnpm test:run` — fix any failing tests before continuing
-8. Run `pnpm build` — fix any TypeScript or Next.js compilation errors before continuing
-9. Use the `ui-reviewer` agent to check the UI visually
-10. If the feature touches interactive elements, forms, or navigation — use the `a11y` agent to audit keyboard navigation and ARIA patterns
-11. If the feature adds or modifies any file in `app/api/` — use the `api` agent to verify route design, error shapes, and Zod validation
-12. Only report the feature as done when all checks pass
+3. Read `context/specs/<feature-name>/spec.md` if it exists — acceptance criteria are the test targets
+4. Set Status to "In Progress"
+5. Create and checkout the feature branch (derive name from H1 heading)
+6. State explicitly: "Writing tests for [feature]. Not writing any implementation yet."
+7. Write failing tests for all goals, derived from the spec acceptance criteria
+8. Run `pnpm test:run` — confirm every new test is **red**. A test that passes before any implementation is broken — fix it before continuing
+9. Commit: `git commit -m "test: failing tests for <feature-name>"`
+10. **Stop here.** Output: "Tests committed. Review them, then run `/feature implement` to proceed."

@@ -22,7 +22,8 @@ Write a plan for: $ARGUMENTS
 - **Max 1 page** — if it's longer, simplify
 - **5–10 tasks** — no more, no fewer
 - Each task must have a **concrete action** and a **verifiable outcome**
-- Save the plan to `context/plans/{task-slug}.md`
+- If a feature is active: save to `context/specs/<feature-name>/plan.md`
+- Otherwise (bug fix, refactor, etc.): save to `context/plans/{task-slug}.md`
 - Update checkboxes as work progresses
 
 ---
@@ -30,11 +31,12 @@ Write a plan for: $ARGUMENTS
 ## Process
 
 1. Understand the goal — read `context/features/current-feature.md` if a feature is active
-2. Identify affected files (read them before writing the plan)
-3. Break work into 5–10 sequential tasks
-4. Write the plan using the format below
-5. Save to `context/plans/{task-slug}.md`
-6. Show a summary and ask for approval before starting
+2. Read `context/specs/<feature-name>/spec.md` — acceptance criteria become the test targets
+3. Identify affected files (read them before writing the plan)
+4. Break work into 5–10 sequential tasks; each implementable task must include a failing-tests step before the implementation step (see TDD pattern below)
+5. Write the plan using the format below
+6. Save to `context/specs/<feature-name>/plan.md` if a feature is active, otherwise `context/plans/{task-slug}.md`
+7. Show a summary and ask for approval before starting — this is **Gate 3** in the SDD flow
 
 ---
 
@@ -65,11 +67,22 @@ Write a plan for: $ARGUMENTS
 
 ---
 
+## TDD Task Pattern
+
+Each implementable task must be split into two steps:
+
+```
+- [ ] N. Write failing tests for X → run `pnpm test:run`, confirm red → commit "test: failing tests for X"
+- [ ] N+1. Implement X until tests pass → run `pnpm test:run`, confirm green
+```
+
+Never write an implementation task without a preceding failing-tests task.
+
 ## Good vs Bad Tasks
 
 | Bad (vague) | Good (concrete) |
 |-------------|-----------------|
-| Set up the component | Create `components/features/X/X.tsx` with named export `X` |
-| Add tests | Write test for `useX` covering happy path and empty-state edge case in `__tests__/hooks/useX.test.ts` |
+| Set up the component | Create `components/X.tsx` with named export `X` |
+| Add tests | Write failing tests for `useX` covering happy path and empty-state in `__tests__/hooks/useX.test.ts` → confirm red → commit |
 | Fix the bug | Trace null value in `[function]` → add guard before `.map()` call |
 | Make it work | Run `pnpm dev`, navigate to `[route]`, confirm [behaviour] |

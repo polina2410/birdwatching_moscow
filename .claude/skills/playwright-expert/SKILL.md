@@ -36,8 +36,8 @@ Write or debug E2E tests for: $ARGUMENTS
 
 ```ts
 // 1. Role-based (preferred)
-page.getByRole('button', { name: 'Start Quiz' })
-page.getByRole('heading', { name: 'World Explorer' })
+page.getByRole('button', { name: 'Submit request' })
+page.getByRole('heading', { name: 'Upcoming events' })
 
 // 2. Label / placeholder
 page.getByLabel('Search countries')
@@ -59,8 +59,8 @@ page.getByTestId('flag-mosaic')
 ### Basic Flow
 ```ts
 await page.goto('http://localhost:3000');
-await page.getByRole('button', { name: 'Start Quiz' }).click();
-await expect(page.getByRole('heading', { name: 'Quiz Setup' })).toBeVisible();
+await page.getByRole('button', { name: 'Submit request' }).click();
+await expect(page.getByRole('heading', { name: 'Request sent' })).toBeVisible();
 ```
 
 ### Waiting (use auto-waiting — never waitForTimeout)

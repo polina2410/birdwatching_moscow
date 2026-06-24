@@ -7,4 +7,3 @@
     - Test happy path and error cases
     - Do not write tests just to write them. Use your best judgment
 4. Run `pnpm test:run` to verify all tests pass
-5. Run `pnpm test:coverage` and confirm no threshold is newly failing

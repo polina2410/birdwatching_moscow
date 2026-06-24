@@ -41,7 +41,7 @@ ANALYZE=true pnpm build
 ### Core Web Vitals
 - **LCP:** Is the largest content element (flag image or heading) loaded eagerly?
 - **CLS:** Do `motion` animations set explicit `width`/`height` before animating? Unsized elements cause layout shift.
-- **INP:** Are quiz answer interactions synchronous? Avoid heavy computation on click handlers.
+- **INP:** Are filter and signup interactions synchronous? Avoid heavy computation on click handlers.
 
 ### Caching
 - `...` uses ISR — verify no other fetch in the codebase duplicates this call without revalidation
@@ -49,7 +49,7 @@ ANALYZE=true pnpm build
 - Verify `unstable_cache` or `React.cache` is used when the same data is fetched multiple times per request
 
 ### Lazy Loading
-- Large components (quiz, country detail modals) should use `next/dynamic` with `ssr: false` if they are client-heavy
+- Large client-heavy components (admin panel, rich dialogs) should use `next/dynamic` with `ssr: false`
 - Flag images from external URLs: consider `loading="lazy"` on below-the-fold images
 
 ## Output Format
