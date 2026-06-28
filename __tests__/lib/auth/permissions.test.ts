@@ -1,30 +1,31 @@
 import { describe, it, expect } from 'vitest'
+import { Role } from '@/generated/prisma/client'
 import { isAdmin, isSuperAdmin } from '@/lib/auth/permissions'
 
 describe('isAdmin', () => {
   it('returns true for ADMIN', () => {
-    expect(isAdmin('ADMIN')).toBe(true)
+    expect(isAdmin(Role.ADMIN)).toBe(true)
   })
 
   it('returns true for SUPERADMIN', () => {
-    expect(isAdmin('SUPERADMIN')).toBe(true)
+    expect(isAdmin(Role.SUPERADMIN)).toBe(true)
   })
 
   it('returns false for USER', () => {
-    expect(isAdmin('USER')).toBe(false)
+    expect(isAdmin(Role.USER)).toBe(false)
   })
 })
 
 describe('isSuperAdmin', () => {
   it('returns true for SUPERADMIN', () => {
-    expect(isSuperAdmin('SUPERADMIN')).toBe(true)
+    expect(isSuperAdmin(Role.SUPERADMIN)).toBe(true)
   })
 
   it('returns false for ADMIN', () => {
-    expect(isSuperAdmin('ADMIN')).toBe(false)
+    expect(isSuperAdmin(Role.ADMIN)).toBe(false)
   })
 
   it('returns false for USER', () => {
-    expect(isSuperAdmin('USER')).toBe(false)
+    expect(isSuperAdmin(Role.USER)).toBe(false)
   })
 })

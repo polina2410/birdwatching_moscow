@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import React from 'react'
+import { Role } from '@/generated/prisma/client'
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
@@ -39,7 +40,7 @@ type UserRow = {
   id: string
   name: string
   email: string
-  role: 'USER' | 'ADMIN' | 'SUPERADMIN'
+  role: Role
   createdAt: Date
   deletedAt: Date | null
   blockedAt: Date | null
@@ -50,7 +51,7 @@ function makeUser(overrides: Partial<UserRow> = {}): UserRow {
     id: 'user-1',
     name: 'Test User',
     email: 'test@example.com',
-    role: 'USER',
+    role: Role.USER,
     createdAt: new Date('2024-01-01'),
     deletedAt: null,
     blockedAt: null,

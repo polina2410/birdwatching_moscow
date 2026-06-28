@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
-import { requireSuperAdmin } from '@/lib/auth/requireAdmin'
+import { requireAdmin } from '@/lib/auth/requireAdmin'
+import { isSuperAdmin } from '@/lib/auth/permissions'
 import { UsersTable } from '@/components/admin/UsersTable'
 import type { Role } from '@/generated/prisma/client'
 
@@ -16,7 +17,8 @@ type Props = {
 }
 
 export default async function AdminUsersPage({ searchParams }: Props) {
-  await requireSuperAdmin()
+  const user = await requireAdmin()
+  const canChangeRole = isSuperAdmin(user.role)
   const params = await searchParams
   const page = Math.max(1, Number(params.page ?? 1))
   const role = params.role as Role | undefined
@@ -62,7 +64,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Пользователи</h1>
-      <UsersTable users={users} page={page} totalPages={totalPages} />
+      <UsersTable users={users} page={page} totalPages={totalPages} canChangeRole={canChangeRole} />
     </div>
   )
 }

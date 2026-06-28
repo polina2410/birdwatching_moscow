@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { useTableNav } from '@/hooks/useTableNav'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -15,7 +15,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useDebounce } from '@/lib/useDebounce'
 import { useAdminAction } from '@/hooks/useAdminAction'
-import type { Role } from '@/generated/prisma/client'
+import { ROLE_LABELS, ALL_ROLES } from '@/lib/auth/roles'
+import { Role } from '@/generated/prisma/enums'
 
 type UserRow = {
   id: string
@@ -35,20 +36,10 @@ type HistoryEntry = {
   changedByUser: { name: string; email: string }
 }
 
-const ROLE_LABELS: Record<Role, string> = {
-  USER: 'Пользователь',
-  ADMIN: 'Админ',
-  SUPERADMIN: 'Суперадмин',
-}
+type Props = { users: UserRow[]; page: number; totalPages: number; canChangeRole: boolean }
 
-const ALL_ROLES: Role[] = ['USER', 'ADMIN', 'SUPERADMIN']
-
-type Props = { users: UserRow[]; page: number; totalPages: number }
-
-export const UsersTable = ({ users, page, totalPages }: Props) => {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+export const UsersTable = ({ users, page, totalPages, canChangeRole }: Props) => {
+  const { searchParams, updateParam, goPage } = useTableNav()
   const { act, isPending } = useAdminAction()
 
   const [roleModal, setRoleModal] = useState<{ user: UserRow; newRole: Role } | null>(null)
@@ -60,13 +51,6 @@ export const UsersTable = ({ users, page, totalPages }: Props) => {
   const currentRole = searchParams.get('role') ?? ''
   const showDeleted = searchParams.get('showDeleted') === 'true'
   const showBlocked = searchParams.get('showBlocked') === 'true'
-
-  const updateParam = (key: string, value: string) => {
-    const sp = new URLSearchParams(searchParams.toString())
-    if (value) sp.set(key, value); else sp.delete(key)
-    sp.delete('page')
-    router.push(`${pathname}?${sp.toString()}`)
-  }
 
   useEffect(() => {
     const prevSearch = searchParams.get('search') ?? ''
@@ -80,12 +64,6 @@ export const UsersTable = ({ users, page, totalPages }: Props) => {
     } catch {
       toast.error('Ошибка загрузки истории')
     }
-  }
-
-  const goPage = (p: number) => {
-    const sp = new URLSearchParams(searchParams.toString())
-    sp.set('page', String(p))
-    router.push(`${pathname}?${sp.toString()}`)
   }
 
   return (
@@ -134,7 +112,7 @@ export const UsersTable = ({ users, page, totalPages }: Props) => {
               <TableCell>{u.name}</TableCell>
               <TableCell>{u.email}</TableCell>
               <TableCell>
-                <Badge variant={u.role === 'SUPERADMIN' ? 'default' : 'secondary'}>{ROLE_LABELS[u.role]}</Badge>
+                <Badge variant={u.role === Role.SUPERADMIN ? 'default' : 'secondary'}>{ROLE_LABELS[u.role]}</Badge>
               </TableCell>
               <TableCell>{format(new Date(u.createdAt), 'd MMM yyyy', { locale: ru })}</TableCell>
               <TableCell>
@@ -149,10 +127,10 @@ export const UsersTable = ({ users, page, totalPages }: Props) => {
                     •••
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {!u.deletedAt && (
+                    {canChangeRole && !u.deletedAt && (
                       <DropdownMenuItem
                         onClick={() => {
-                          const initial: Role = u.role === 'USER' ? 'ADMIN' : u.role === 'ADMIN' ? 'SUPERADMIN' : 'ADMIN'
+                          const initial: Role = u.role === Role.USER ? Role.ADMIN : u.role === Role.ADMIN ? Role.SUPERADMIN : Role.ADMIN
                           setRoleModal({ user: u, newRole: initial })
                         }}
                       >

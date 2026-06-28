@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { useTableNav } from '@/hooks/useTableNav'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -52,33 +52,17 @@ export const EventsTable = ({
   page: number
   totalPages: number
 }) => {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const { searchParams, updateParam, goPage } = useTableNav()
   const { act, isPending } = useAdminAction()
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null)
   const [cancelTarget, setCancelTarget] = useState<{ id: string; title: string } | null>(null)
   const [restoreModal, setRestoreModal] = useState<RestoreModalState>({ open: false })
   const [newStartsAt, setNewStartsAt] = useState('')
 
-  const currentType = searchParams.get('type') ?? 'ALL'
   const currentStatus = searchParams.get('status') ?? ''
   const currentSearch = searchParams.get('search') ?? ''
   const [searchInput, setSearchInput] = useState(currentSearch)
   const debouncedSearch = useDebounce(searchInput, 400)
-
-  const updateParam = (key: string, value: string) => {
-    const sp = new URLSearchParams(searchParams.toString())
-    if (value) sp.set(key, value); else sp.delete(key)
-    sp.delete('page')
-    router.push(`${pathname}?${sp.toString()}`)
-  }
-
-  const goPage = (p: number) => {
-    const sp = new URLSearchParams(searchParams.toString())
-    sp.set('page', String(p))
-    router.push(`${pathname}?${sp.toString()}`)
-  }
 
   useEffect(() => {
     const prevSearch = searchParams.get('search') ?? ''
@@ -103,14 +87,6 @@ export const EventsTable = ({
 
   return (
     <div className="space-y-4">
-      <Tabs value={currentType} onValueChange={(v) => updateParam('type', v == null || v === 'ALL' ? '' : v)}>
-        <TabsList>
-          <TabsTrigger value="ALL">Все</TabsTrigger>
-          <TabsTrigger value="WALK">Прогулки</TabsTrigger>
-          <TabsTrigger value="EXPEDITION">Экспедиции</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
       <div className="flex gap-3">
         <Input
           placeholder="Поиск по названию..."

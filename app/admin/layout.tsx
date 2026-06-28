@@ -1,17 +1,11 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
-import { isAdmin, isSuperAdmin } from '@/lib/auth/permissions'
+import { isAdmin } from '@/lib/auth/permissions'
+import { ROLE_LABELS } from '@/lib/auth/roles'
 import { AdminLogoutButton } from '@/components/admin/AdminLogoutButton'
 import { Badge } from '@/components/ui/badge'
 import { Toaster } from '@/components/ui/sonner'
-import type { Role } from '@/generated/prisma/client'
-
-const ROLE_LABELS: Record<Role, string> = {
-  USER: 'Пользователь',
-  ADMIN: 'Админ',
-  SUPERADMIN: 'Суперадмин',
-}
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -28,8 +22,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Badge variant="secondary" className="mt-1 text-xs">{ROLE_LABELS[role]}</Badge>
         </div>
         <nav className="flex-1 p-2 space-y-1">
-          <Link href="/admin/events" className="flex items-center rounded-md px-3 py-2 text-sm hover:bg-accent">
-            События
+          <Link href="/admin/walks" className="flex items-center rounded-md px-3 py-2 text-sm hover:bg-accent">
+            Прогулки
+          </Link>
+          <Link href="/admin/expeditions" className="flex items-center rounded-md px-3 py-2 text-sm hover:bg-accent">
+            Экспедиции
           </Link>
           <Link href="/admin/team" className="flex items-center rounded-md px-3 py-2 text-sm hover:bg-accent">
             Команда
@@ -37,11 +34,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/requests" className="flex items-center rounded-md px-3 py-2 text-sm hover:bg-accent">
             Заявки
           </Link>
-          {isSuperAdmin(role) && (
-            <Link href="/admin/users" className="flex items-center rounded-md px-3 py-2 text-sm hover:bg-accent">
-              Пользователи
-            </Link>
-          )}
+          <Link href="/admin/users" className="flex items-center rounded-md px-3 py-2 text-sm hover:bg-accent">
+            Пользователи
+          </Link>
         </nav>
         <div className="p-4 border-t">
           <AdminLogoutButton />

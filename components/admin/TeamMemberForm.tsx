@@ -60,9 +60,9 @@ export const TeamMemberForm = ({ member }: { member?: TeamMember }) => {
           toast.success('Сохранено')
           router.refresh()
         } else {
-          const id = await createTeamMember(input)
+          await createTeamMember(input)
           toast.success('Сохранено')
-          router.push(`/admin/team/${id}`)
+          router.push('/admin/team')
         }
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Ошибка')

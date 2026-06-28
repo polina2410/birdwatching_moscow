@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { useTableNav } from '@/hooks/useTableNav'
 import { useTransition, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -37,27 +37,12 @@ type Props = {
 }
 
 export const RequestsTable = ({ requests, page, totalPages, eventIdFilter }: Props) => {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const { router, searchParams, updateParam, goPage } = useTableNav()
   const [isPending, startTransition] = useTransition()
   const [detailRequest, setDetailRequest] = useState<RequestRow | null>(null)
 
   const currentStatus = searchParams.get('status') ?? ''
   const currentType = searchParams.get('type') ?? ''
-
-  const updateParam = (key: string, value: string) => {
-    const sp = new URLSearchParams(searchParams.toString())
-    if (value) sp.set(key, value); else sp.delete(key)
-    sp.delete('page')
-    router.push(`${pathname}?${sp.toString()}`)
-  }
-
-  const goPage = (p: number) => {
-    const sp = new URLSearchParams(searchParams.toString())
-    sp.set('page', String(p))
-    router.push(`${pathname}?${sp.toString()}`)
-  }
 
   const toggleStatus = (req: RequestRow) => {
     const next: RequestStatus = req.status === 'NEW' ? 'WAITLIST' : 'NEW'

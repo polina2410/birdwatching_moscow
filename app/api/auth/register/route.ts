@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+import { Role } from '@/generated/prisma/client'
 import { registerSchema } from '@/lib/validation/auth'
 import { sendMail } from '@/lib/mail'
 import { BCRYPT_COST } from '@/lib/constants'
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   const passwordHash = await bcrypt.hash(password, BCRYPT_COST)
-  await prisma.user.create({ data: { email, name, passwordHash, role: 'USER' } })
+  await prisma.user.create({ data: { email, name, passwordHash, role: Role.USER } })
   await sendMail({ to: email, kind: 'welcome', data: { name } })
 
   return NextResponse.json({ ok: true })
