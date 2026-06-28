@@ -22,6 +22,6 @@
         - If inline description: omit the reference line entirely
     - Set Status to "Not Started"
 
-4. Confirm spec loaded and show the feature summary.
+4. **Stop here.** Output: "Feature loaded: <feature-name>. Goals written to current-feature.md. Run `/feature start` when ready to create the branch and write failing tests."
 
-**Next step:** run `/feature start` to create the branch and write the first failing tests.
+Do NOT proceed to branch creation or test writing. Wait for the user to explicitly run `/feature start`.

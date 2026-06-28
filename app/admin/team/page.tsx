@@ -15,7 +15,7 @@ export default async function AdminTeamPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Команда</h1>
-        <Link href="/admin/team/new" className={buttonVariants()}>Добавить участника</Link>
+        <Link href="/admin/team/new" className={buttonVariants({ variant: 'secondary' })}>Добавить участника</Link>
       </div>
       <TeamTable members={members} />
     </div>
