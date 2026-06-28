@@ -33,7 +33,7 @@ Execute the requested action: $ARGUMENTS
 | `implement` | Implement until tests are green, run quality gate |
 | `test` | Fill coverage gaps after implementation |
 | `explain` *(optional)* | Document what changed and why |
-| `complete` | Commit, push, merge, reset |
+| `complete` | Create PR (stops for human merge), then clean up branch and reset |
 
 See [actions/](actions/) for detailed instructions.
 

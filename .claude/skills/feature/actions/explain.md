@@ -1,6 +1,6 @@
 # Explain Action
 
-1. Read current-feature.md to understand what was implemented
+1. Read `context/features/current-feature.md` — verify Status is "In Progress". If not, error: "No feature is in progress. Run /feature load and /feature start first."
 2. Run `git diff main...HEAD --name-only` to get list of files changed
 3. For each file created or modified:
     - Show the file path
@@ -10,7 +10,7 @@
 
 ## Output Format
 
-## Files Changed
+### Files Changed
 
 **path/to/file.ts** (new)
 Brief explanation of what this file does and why it was added.
@@ -18,6 +18,8 @@ Brief explanation of what this file does and why it was added.
 **path/to/other.ts** (modified)
 What changed and why.
 
-## How It All Connects
+### How It All Connects
 
 Brief summary of the data/control flow between these files.
+
+**Next step:** run `/feature complete` to create the PR.
