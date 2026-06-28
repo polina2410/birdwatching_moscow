@@ -1,7 +1,7 @@
 # Current Feature: walk-expedition-split
 
 ## Status
-Not Started
+In Progress
 
 ## Goals
 
