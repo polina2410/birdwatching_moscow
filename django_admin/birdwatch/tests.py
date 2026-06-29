@@ -1,11 +1,11 @@
 from unittest.mock import patch, MagicMock, call
-from django.test import TestCase
+from django.test import SimpleTestCase
 from django.contrib.auth.models import User
 
 from birdwatch.backends import AppUserAuthBackend
 
 
-class AppUserAuthBackendTest(TestCase):
+class AppUserAuthBackendTest(SimpleTestCase):
     def setUp(self):
         self.backend = AppUserAuthBackend()
 
