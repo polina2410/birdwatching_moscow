@@ -1,7 +1,7 @@
 # Current Feature: django-setup
 
 ## Status
-Not Started
+In Progress
 
 ## Goals
 
