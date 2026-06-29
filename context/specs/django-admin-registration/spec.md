@@ -15,13 +15,13 @@ All admin classes live in `django_admin/birdwatch/admin.py`.
 ```python
 @admin.register(Walk)
 class WalkAdmin(admin.ModelAdmin):
-    list_display  = ['title', 'startsAt', 'status', 'location', 'priceKopecks', 'capacity']
+    list_display  = ['title', 'startsAt', 'status', 'location', 'price_roubles', 'capacity']
     list_filter   = ['status']
     search_fields = ['title', 'slug', 'location']
     ordering      = ['-startsAt']
 ```
 
-`priceKopecks` display: add a `price_roubles` computed column (kopecks ÷ 100, formatted as "123 ₽") and use it in `list_display` instead of the raw field.
+`price_roubles`: a computed column method on `WalkAdmin` that returns kopecks ÷ 100 formatted as `"123 ₽"`. Set `price_roubles.short_description = 'Цена'`.
 
 ### `ExpeditionAdmin`
 
@@ -42,7 +42,7 @@ class RequestAdmin(admin.ModelAdmin):
     list_display   = ['type', 'name', 'email', 'status', 'createdAt']
     list_filter    = ['type', 'status']
     search_fields  = ['name', 'email']
-    readonly_fields = [all fields except 'status']
+    readonly_fields = ['id', 'type', 'expedition', 'name', 'email', 'message', 'createdAt']
 ```
 
 Requests are created by users; admins only update `status`. `has_add_permission` returns `False`.
@@ -88,14 +88,14 @@ class TeamMemberAdmin(admin.ModelAdmin):
 
 - **Superuser only.** Guard at the top of the action: `if not modeladmin.has_change_role_permission(request): raise PermissionDenied`.
 - `has_change_role_permission(request)` returns `request.user.is_superuser`.
-- The action renders an intermediate confirmation form (standard Django `intermediate page` pattern) where the superuser selects the new role from `['USER', 'ADMIN', 'SUPERADMIN']`.
+- The action renders an intermediate confirmation form (standard Django intermediate-page pattern) where the superuser selects the new role from `['USER', 'ADMIN', 'SUPERADMIN']`. Template: `django_admin/birdwatch/templates/admin/birdwatch/change_role_intermediate.html`. The action checks `'apply' in request.POST` to distinguish the initial render from the confirmed submission.
 - On confirmation:
   1. Resolve the acting user: `changer = AppUser.objects.get(email=request.user.email)`.
   2. For each selected `AppUser`:
      - If `target.id == changer.id`: skip with an error message (cannot change own role).
      - If `target.role == 'SUPERADMIN'` and only one active SUPERADMIN remains: skip with an error message (last SUPERADMIN guard).
      - Otherwise: record `from_role = target.role`, update `target.role = new_role`, save.
-     - Insert a `RoleChangeLog` row: `targetUserId=target.id`, `changedByUserId=changer.id`, `fromRole=from_role`, `toRole=new_role`, `createdAt=now()`.
+     - Insert a `RoleChangeLog` row: `id=str(uuid.uuid4())`, `targetUserId=target.id`, `changedByUserId=changer.id`, `fromRole=from_role`, `toRole=new_role`, `createdAt=timezone.now()`. (`managed=False` means Django will not auto-generate the UUID primary key.)
 - Decorated with `@admin.action(description='Изменить роль')`.
 - The action must NOT appear in the action dropdown for non-superuser staff. Achieve this by overriding `get_actions` on `AppUserAdmin` to exclude `change_role` when `not request.user.is_superuser`.
 
@@ -122,7 +122,7 @@ All `verbose_name` / `verbose_name_plural` are set on the model `Meta` class (de
 ['birdwatch.walk', 'birdwatch.expedition', 'birdwatch.request', 'birdwatch.appuser', 'birdwatch.teammember']
 ```
 
-Hide Django's own `auth` and `sites` apps from the sidebar using `hide_apps` in `JAZZMIN_SETTINGS`.
+Hide Django's own `auth` app from the sidebar using `hide_apps: ['auth']` in `JAZZMIN_SETTINGS`. (`django.contrib.sites` is not installed, so it does not need to be listed.)
 
 ---
 
@@ -150,7 +150,8 @@ Hide Django's own `auth` and `sites` apps from the sidebar using `hide_apps` in 
 - **Last SUPERADMIN guard in `change_role`:** Counts only active (non-deleted) SUPERADMIN rows. If the count would drop to zero after the change, the change is rejected.
 - **Last SUPERADMIN guard in `block_users`:** Same check — blocking the last SUPERADMIN is rejected.
 - **`change_role` called by non-superuser (direct POST bypass):** `PermissionDenied` is raised before any DB write.
-- **Bulk action with mixed valid/invalid rows:** Valid rows are updated; invalid rows (own account, last SUPERADMIN) are skipped individually with per-row error messages. The action does not abort all-or-nothing.
+- **Bulk action with mixed valid/invalid rows (`change_role`):** Valid rows are updated; invalid rows (own account, last SUPERADMIN) are skipped individually with per-row error messages. The action does not abort all-or-nothing.
+- **`block_users` is all-or-nothing:** If the selection includes the last active SUPERADMIN, *no* rows in the selection are updated and a single `messages.error` is shown. This is intentionally stricter than `change_role` because blocking the last SUPERADMIN would lock everyone out of Django admin immediately.
 
 ---
 

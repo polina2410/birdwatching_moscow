@@ -87,11 +87,11 @@ JAZZMIN_SETTINGS = {
     'site_title': 'Birdwatching Moscow Admin',
     'site_header': 'Birdwatching Moscow',
     'order_with_respect_to': [
-        'birdwatch.Walk',
-        'birdwatch.Expedition',
-        'birdwatch.Request',
-        'birdwatch.AppUser',
-        'birdwatch.TeamMember',
+        'birdwatch.walk',
+        'birdwatch.expedition',
+        'birdwatch.request',
+        'birdwatch.appuser',
+        'birdwatch.teammember',
     ],
     'hide_apps': ['auth'],
 }
