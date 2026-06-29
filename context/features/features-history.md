@@ -92,3 +92,20 @@ Full admin panel built with Next.js App Router Server Actions. Four sections cov
 ### Summary
 
 Replaced the polymorphic `Event` model with `Walk` (ticketed, single guide FK) and `Expedition` (spot-based, M2M guides, multi-day). Migration drops the `Event` table and all `EventType` references, creates the two new tables with proper constraints, renames the `Ticket.eventId` FK to `walkId`, and adds `expeditionId` to `Request`. Seed updated to populate both models. All admin CRUD updated to use the new models.
+
+---
+
+## Django Admin Setup
+
+**Branch:** django-setup
+**Completed:** 2026-06-29
+
+### Goals
+
+- Bootstrap Django project in `django_admin/` connected to the same PostgreSQL DB as the Next.js app
+- Read-only `managed=False` models mirroring all Prisma tables
+- `AppUserAuthBackend` authenticates Django admin logins via the app's `User` table — no separate credential management
+
+### Summary
+
+Created the full `django_admin/` project: Django 5, jazzmin, psycopg2-binary, bcrypt. Settings parse `DATABASE_URL` manually; `MIGRATION_MODULES = {'birdwatch': None}` prevents Django from touching Prisma-managed tables. Seven `managed=False` models mirror Walk, Expedition (M2M guides via `_ExpeditionToTeamMember`), ExpeditionDay, AppUser, TeamMember, Request, and RoleChangeLog. `AppUserAuthBackend` looks up by email with deleted/blocked filters, verifies bcrypt hash, gates on ADMIN/SUPERADMIN role, and syncs `is_superuser` on every login. 11 unit tests using `SimpleTestCase` (no live DB required).
