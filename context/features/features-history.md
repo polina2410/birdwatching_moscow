@@ -75,3 +75,20 @@ Implemented full email + password auth on Auth.js v5. Split config pattern used:
 ### Summary
 
 Full admin panel built with Next.js App Router Server Actions. Four sections covering events, team, requests, and users. Events support full lifecycle management including slug auto-generation, expedition days, guide assignment, and ticket-aware delete guard. Users section is SUPERADMIN-gated with transactional role changes logged to RoleChangeLog. Auth guards added per-page (defense-in-depth on top of layout). `useAdminAction` hook extracts shared server-action pattern. `ensureUniqueSlug` uses crypto.randomUUID with retry loop. Cross-field `spotsLeft <= totalSpots` validation on both client and server.
+
+---
+
+## Walk / Expedition Schema Split
+
+**Branch:** walk-expedition-split
+**Completed:** 2026-06-29
+
+### Goals
+
+- Replace the single `Event` Prisma model with two dedicated models — `Walk` and `Expedition`
+- Eliminate nullable-by-convention fields; make type-specific constraints explicit in the schema
+- Zero TypeScript errors with no remaining references to `Event` model or `EventType` enum
+
+### Summary
+
+Replaced the polymorphic `Event` model with `Walk` (ticketed, single guide FK) and `Expedition` (spot-based, M2M guides, multi-day). Migration drops the `Event` table and all `EventType` references, creates the two new tables with proper constraints, renames the `Ticket.eventId` FK to `walkId`, and adds `expeditionId` to `Request`. Seed updated to populate both models. All admin CRUD updated to use the new models.
