@@ -112,6 +112,24 @@ class AppUserAuthBackendTest(SimpleTestCase):
         self.assertFalse(django_user.is_superuser)
         django_user.save.assert_called()
 
+    # --- string passwordHash encoding (real DB path) ---
+
+    @patch("birdwatch.backends.bcrypt.checkpw", return_value=True)
+    @patch("birdwatch.backends.AppUser.objects")
+    @patch("birdwatch.backends.User.objects")
+    def test_string_password_hash_is_encoded_for_bcrypt(self, mock_auth_user_mgr, mock_app_user_mgr, mock_checkpw):
+        app_user = MagicMock(role="ADMIN", blockedAt=None, deletedAt=None, passwordHash="$2b$12$stringhash")
+        mock_app_user_mgr.get.return_value = app_user
+        django_user = MagicMock(spec=User)
+        mock_auth_user_mgr.get_or_create.return_value = (django_user, True)
+
+        self.backend.authenticate(None, username="admin@test.ru", password="secret")
+
+        mock_checkpw.assert_called_once_with(
+            "secret".encode("utf-8"),
+            "$2b$12$stringhash".encode("utf-8"),
+        )
+
     # --- get_user ---
 
     @patch("birdwatch.backends.User.objects")
