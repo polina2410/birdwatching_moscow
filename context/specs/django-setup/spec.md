@@ -66,15 +66,15 @@ All models:
 
 Models to define:
 
-**`Walk`** — all Walk fields; M2M to `TeamMember` via explicit through model with `db_table = '_TeamMemberToWalk'` (confirm exact name from migration SQL). `db_table = 'Walk'`. `verbose_name = 'Прогулка'`, `verbose_name_plural = 'Прогулки'`.
+**`Walk`** — all Walk fields; direct FK to `TeamMember` via `guide_id = models.IntegerField(db_column='guideId')` — Walk has a single guide, not an M2M relationship; there is no `_TeamMemberToWalk` join table. `db_table = 'Walk'`. `verbose_name = 'Прогулка'`, `verbose_name_plural = 'Прогулки'`.
 
-**`Expedition`** — all Expedition fields; M2M to `TeamMember` via explicit through model with `db_table = '_ExpeditionToTeamMember'` (confirm exact name). `db_table = 'Expedition'`. `verbose_name = 'Экспедиция'`, `verbose_name_plural = 'Экспедиции'`.
+**`Expedition`** — all Expedition fields; M2M to `TeamMember` via explicit through model with `db_table = '_ExpeditionToTeamMember'` (confirmed from migration SQL); the through model's `B` column is `INTEGER` (FK to `TeamMember.id`) — use `models.IntegerField()` for that side, not `CharField`. `db_table = 'Expedition'`. `verbose_name = 'Экспедиция'`, `verbose_name_plural = 'Экспедиции'`.
 
 **`ExpeditionDay`** — `expeditionId` FK to `Expedition` (`db_column = 'expeditionId'`); `db_table = 'ExpeditionDay'`.
 
 **`AppUser`** — mirrors app `User` table; `db_table = 'User'`; all fields including `role`, `blockedAt`, `deletedAt`, `passwordHash`; `verbose_name = 'Пользователь'`, `verbose_name_plural = 'Пользователи'`. Must NOT extend `AbstractUser` — it is a plain `Model`. Django's own `auth.User` is the separate admin session model.
 
-**`TeamMember`** — all fields; `db_table = 'TeamMember'`; `verbose_name = 'Член команды'`, `verbose_name_plural = 'Команда'`.
+**`TeamMember`** — all fields; `id = models.AutoField(primary_key=True)` (SERIAL integer — not UUID/CharField); `db_table = 'TeamMember'`; `verbose_name = 'Член команды'`, `verbose_name_plural = 'Команда'`.
 
 **`Request`** — all fields; `expeditionId` nullable FK to `Expedition` (`db_column = 'expeditionId'`); `db_table = 'Request'`; `verbose_name = 'Заявка'`, `verbose_name_plural = 'Заявки'`.
 
@@ -120,7 +120,7 @@ This means:
 ## Edge cases
 
 - **`DATABASE_URL` not set:** `settings.py` raises `django.core.exceptions.ImproperlyConfigured` at startup — the server does not start.
-- **Prisma join table naming:** Confirm exact `db_table` values for M2M through models against the actual migration SQL from `walk-expedition-split` before hardcoding.
+- **Prisma join table naming:** `_ExpeditionToTeamMember` is confirmed from migration SQL and is the only join table — Walk does not use M2M and has no join table.
 - **`auth_user` row sync:** If an ADMIN's role is changed to USER between logins, `authenticate` returns `None` and they can no longer access Django admin, but their `auth_user` row remains (stale but harmless — `is_staff` is re-synced on next successful login).
 - **bcrypt hash format:** The app stores hashes in the format NextAuth.js produces (standard bcrypt `$2b$` prefix). Confirm `bcrypt.checkpw` accepts this format; if the app uses a different prefix (`$2a$`), add a normalization step.
 

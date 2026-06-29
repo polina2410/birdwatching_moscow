@@ -138,7 +138,6 @@ ALTER TABLE "ExpeditionDay" DROP CONSTRAINT "ExpeditionDay_eventId_fkey";
 ALTER TABLE "ExpeditionDay" DROP COLUMN "eventId";
 ALTER TABLE "ExpeditionDay" ADD CONSTRAINT "ExpeditionDay_expeditionId_fkey"
     FOREIGN KEY ("expeditionId") REFERENCES "Expedition"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "ExpeditionDay" ADD CONSTRAINT "ExpeditionDay_dayNumber_check" CHECK ("dayNumber" >= 1);
 
 -- Ticket FK rename: eventId → walkId
 ALTER TABLE "Ticket" ADD COLUMN "walkId" TEXT;
