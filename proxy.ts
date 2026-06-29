@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { isAdmin, isSuperAdmin } from '@/lib/auth/permissions';
-import type { Role } from '@/generated/prisma/client';
 
 export async function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
@@ -27,38 +25,19 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isProtectedAccount = pathname.startsWith('/account');
-  const isProtectedAdmin = pathname.startsWith('/admin');
   const isAuthPage = pathname === '/login' || pathname === '/register';
 
-  if (isProtectedAccount || isProtectedAdmin || isAuthPage) {
+  if (isProtectedAccount || isAuthPage) {
     const token = await getToken({
       req: request,
       secret: process.env.AUTH_SECRET,
     });
 
-    if ((isProtectedAccount || isProtectedAdmin) && !token) {
+    if (isProtectedAccount && !token) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(url);
-    }
-
-    if (isProtectedAdmin && token) {
-      const rawRole = token.role as string
-      if (!['USER', 'ADMIN', 'SUPERADMIN'].includes(rawRole)) {
-        return NextResponse.redirect(new URL('/', request.nextUrl))
-      }
-      const role = rawRole as Role
-
-      if (!isAdmin(role)) {
-        return NextResponse.redirect(new URL('/', request.nextUrl));
-      }
-
-      if (pathname.startsWith('/admin/users') && !isSuperAdmin(role)) {
-        const adminUrl = new URL('/admin', request.nextUrl);
-        adminUrl.searchParams.set('error', 'superadmin_required');
-        return NextResponse.redirect(adminUrl);
-      }
     }
 
     if (isAuthPage && token) {

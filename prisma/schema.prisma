@@ -14,11 +14,6 @@ enum Role {
   SUPERADMIN
 }
 
-enum EventType {
-  WALK
-  EXPEDITION
-}
-
 enum EventStatus {
   DRAFT
   ACTIVE
@@ -54,61 +49,73 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
-
-  blockedAt            DateTime?
+  blockedAt    DateTime?
 
   orders               Order[]
   tickets              Ticket[]
   cartItems            CartItem[]
-  publishedEvents      Event[]               @relation("EventPublisher")
+  publishedWalks       Walk[]               @relation("WalkPublisher")
+  publishedExpeditions Expedition[]         @relation("ExpeditionPublisher")
   passwordResetTokens  PasswordResetToken[]
-  roleChangesAsTarget  RoleChangeLog[]       @relation("RoleChangeTarget")
-  roleChangesAsChanger RoleChangeLog[]       @relation("RoleChangeChanger")
+  roleChangesAsTarget  RoleChangeLog[]      @relation("RoleChangeTarget")
+  roleChangesAsChanger RoleChangeLog[]      @relation("RoleChangeChanger")
 }
 
-model Event {
-  id           String      @id @default(uuid())
-  type         EventType
-  slug         String      @unique @db.VarChar(200)
-  title        String      @db.VarChar(150)
-  description  String      @db.Text
-  startsAt     DateTime
-  location     String      @db.VarChar(100)
-  // NOTE: required for WALK, must be null for EXPEDITION — enforced in app logic
-  priceKopecks Int?
-  // NOTE: required for WALK, must be null for EXPEDITION — enforced in app logic
-  capacity     Int?
-  birdSpecies  String[]
-  // NOTE: required for EXPEDITION, must be null for WALK — enforced in app logic
-  totalSpots   Int?
-  // NOTE: required for EXPEDITION, must be null for WALK — enforced in app logic
-  spotsLeft    Int?
-  status       EventStatus @default(DRAFT)
-  coverPhotoUrl String     @db.VarChar(2048)
-  galleryUrls  String[]
-  publishedAt  DateTime?
-  publishedBy  String?
-  createdAt    DateTime  @default(now())
+model Walk {
+  id            String      @id @default(uuid())
+  slug          String      @unique @db.VarChar(200)
+  title         String      @db.VarChar(150)
+  description   String      @db.Text
+  startsAt      DateTime
+  location      String      @db.VarChar(100)
+  priceKopecks  Int
+  capacity      Int
+  guideId       String
+  status        EventStatus @default(DRAFT)
+  coverPhotoUrl String      @db.VarChar(2048)
+  publishedAt   DateTime?
+  publishedBy   String?
+  createdAt     DateTime    @default(now())
 
-  publisher  User?           @relation("EventPublisher", fields: [publishedBy], references: [id])
-  days       ExpeditionDay[]
-  guides     TeamMember[]
-  tickets    Ticket[]
-  cartItems  CartItem[]
-  requests   Request[]
+  guide     TeamMember @relation(fields: [guideId], references: [id])
+  publisher User?      @relation("WalkPublisher", fields: [publishedBy], references: [id])
+  tickets   Ticket[]
+  cartItems CartItem[]
 
-  // Matches the public walk list query: type = WALK AND status = ACTIVE AND startsAt >= now, sorted by startsAt
-  @@index([type, status, startsAt])
+  @@index([status, startsAt])
+}
+
+model Expedition {
+  id            String      @id @default(uuid())
+  slug          String      @unique @db.VarChar(200)
+  title         String      @db.VarChar(150)
+  description   String      @db.Text
+  startsAt      DateTime
+  location      String      @db.VarChar(100)
+  totalSpots    Int
+  spotsLeft     Int
+  status        EventStatus @default(DRAFT)
+  coverPhotoUrl String      @db.VarChar(2048)
+  publishedAt   DateTime?
+  publishedBy   String?
+  createdAt     DateTime    @default(now())
+
+  guides    TeamMember[]
+  publisher User?          @relation("ExpeditionPublisher", fields: [publishedBy], references: [id])
+  days      ExpeditionDay[]
+  requests  Request[]
+
+  @@index([status, startsAt])
 }
 
 model ExpeditionDay {
-  id          String @id @default(uuid())
-  eventId     String
-  dayNumber   Int
-  title       String @db.VarChar(150)
-  description String @db.Text
+  id           String @id @default(uuid())
+  expeditionId String
+  dayNumber    Int
+  title        String @db.VarChar(150)
+  description  String @db.Text
 
-  event Event @relation(fields: [eventId], references: [id])
+  expedition Expedition @relation(fields: [expeditionId], references: [id])
 }
 
 model TeamMember {
@@ -120,7 +127,8 @@ model TeamMember {
   profileLinks String[]
   sortOrder    Int
 
-  events Event[]
+  walks       Walk[]
+  expeditions Expedition[]
 }
 
 model Order {
@@ -141,12 +149,12 @@ model Ticket {
   id        String   @id @default(uuid())
   orderId   String
   userId    String
-  eventId   String
+  walkId    String
   createdAt DateTime @default(now())
 
   order Order @relation(fields: [orderId], references: [id])
   user  User  @relation(fields: [userId], references: [id])
-  event Event @relation(fields: [eventId], references: [id])
+  walk  Walk  @relation(fields: [walkId], references: [id])
 
   @@index([userId])
 }
@@ -154,14 +162,14 @@ model Ticket {
 model CartItem {
   id            String   @id @default(uuid())
   userId        String
-  eventId       String
+  walkId        String
   quantity      Int
   // Set by app to now + 20 min. Active reservation = reservedUntil > now; expired rows filtered lazily on read.
   reservedUntil DateTime
   createdAt     DateTime @default(now())
 
-  user  User  @relation(fields: [userId], references: [id])
-  event Event @relation(fields: [eventId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+  walk Walk @relation(fields: [walkId], references: [id])
 
   @@index([reservedUntil])
 }
@@ -180,17 +188,17 @@ model PasswordResetToken {
 }
 
 model Request {
-  id        String        @id @default(uuid())
-  type      RequestType
+  id           String        @id @default(uuid())
+  type         RequestType
   // NOTE: set for EXPEDITION requests, null for PRIVATE_WALK
-  eventId   String?
-  name      String        @db.VarChar(100)
-  email     String        @db.VarChar(254)
-  message   String        @db.Text
-  status    RequestStatus @default(NEW)
-  createdAt DateTime      @default(now())
+  expeditionId String?
+  name         String        @db.VarChar(100)
+  email        String        @db.VarChar(254)
+  message      String        @db.Text
+  status       RequestStatus @default(NEW)
+  createdAt    DateTime      @default(now())
 
-  event Event? @relation(fields: [eventId], references: [id])
+  expedition Expedition? @relation(fields: [expeditionId], references: [id])
 
   @@index([status])
 }
