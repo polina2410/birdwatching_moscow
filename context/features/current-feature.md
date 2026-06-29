@@ -10,7 +10,3 @@ Not Started
 ## Notes
 
 <!-- Additional context, constraints, or details from spec -->
-
-## History
-
-<!-- Completed features are appended to context/features/features-history.md, not here -->
