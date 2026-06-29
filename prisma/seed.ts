@@ -1,4 +1,4 @@
-import { PrismaClient, EventType, EventStatus, Role } from '../generated/prisma/client'
+import { PrismaClient, EventStatus, Role } from '../generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 
 const connectionString = process.env.DATABASE_URL
@@ -14,7 +14,8 @@ async function main() {
   await prisma.ticket.deleteMany()
   await prisma.order.deleteMany()
   await prisma.expeditionDay.deleteMany()
-  await prisma.event.deleteMany()
+  await prisma.expedition.deleteMany()
+  await prisma.walk.deleteMany()
   await prisma.teamMember.deleteMany()
   await prisma.user.deleteMany()
 
@@ -65,9 +66,8 @@ async function main() {
   })
 
   // PLACEHOLDER: walk 1 — replace coverPhotoUrl with real S3 URL
-  await prisma.event.create({
+  await prisma.walk.create({
     data: {
-      type: EventType.WALK,
       slug: 'utrenniy-berdvoching-pokrovskoe-streshnevo',
       title: 'Утренний бёрдвотчинг в Покровском-Стрешнево',
       description:
@@ -76,20 +76,17 @@ async function main() {
       location: 'Парк Покровское-Стрешнево, вход с ул. Вишнёвая',
       priceKopecks: 150000,
       capacity: 12,
-      birdSpecies: ['Зяблик', 'Дрозд рябинник', 'Большая синица', 'Кряква'],
+      guideId: guide1.id,
       status: EventStatus.ACTIVE,
       coverPhotoUrl: 'https://placeholder.example.com/covers/walk1.jpg',
-      galleryUrls: [],
       publishedAt: now,
       publishedBy: admin.id,
-      guides: { connect: { id: guide1.id } },
     },
   })
 
   // PLACEHOLDER: walk 2 — replace coverPhotoUrl with real S3 URL
-  await prisma.event.create({
+  await prisma.walk.create({
     data: {
-      type: EventType.WALK,
       slug: 'vecher-losiniy-ostrov',
       title: 'Вечерние птицы Лосиного острова',
       description:
@@ -98,20 +95,17 @@ async function main() {
       location: 'Национальный парк «Лосиный остров», Погонный проезд, центральный вход',
       priceKopecks: 120000,
       capacity: 10,
-      birdSpecies: ['Большой пёстрый дятел', 'Ушастая сова', 'Вальдшнеп'],
+      guideId: guide1.id,
       status: EventStatus.ACTIVE,
       coverPhotoUrl: 'https://placeholder.example.com/covers/walk2.jpg',
-      galleryUrls: [],
       publishedAt: now,
       publishedBy: admin.id,
-      guides: { connect: [{ id: guide1.id }, { id: guide2.id }] },
     },
   })
 
   // PLACEHOLDER: expedition — replace coverPhotoUrl with real S3 URL
-  const expedition = await prisma.event.create({
+  const expedition = await prisma.expedition.create({
     data: {
-      type: EventType.EXPEDITION,
       slug: 'altay-2026',
       title: 'Алтай 2026: орлы и соколы',
       description:
@@ -120,10 +114,8 @@ async function main() {
       location: 'Республика Алтай, Чемальский район',
       totalSpots: 12,
       spotsLeft: 8,
-      birdSpecies: ['Беркут', 'Сапсан', 'Балобан', 'Стервятник', 'Кречет'],
       status: EventStatus.ACTIVE,
       coverPhotoUrl: 'https://placeholder.example.com/covers/expedition1.jpg',
-      galleryUrls: [],
       publishedAt: now,
       publishedBy: admin.id,
       guides: { connect: [{ id: guide1.id }, { id: guide2.id }] },
@@ -133,49 +125,49 @@ async function main() {
   await prisma.expeditionDay.createMany({
     data: [
       {
-        eventId: expedition.id,
+        expeditionId: expedition.id,
         dayNumber: 1,
         title: 'Прилёт и размещение',
         description: 'Прилетаем в Горно-Алтайск, трансфер в базовый лагерь. Знакомство с маршрутом и снаряжением.',
       },
       {
-        eventId: expedition.id,
+        expeditionId: expedition.id,
         dayNumber: 2,
         title: 'Первый выход на маршрут',
         description: 'Подъём на первый хребет. Наблюдение за гнездовьями беркута на скальных карнизах.',
       },
       {
-        eventId: expedition.id,
+        expeditionId: expedition.id,
         dayNumber: 3,
         title: 'Горные озёра',
         description: 'Переход к высокогорным озёрам. Встречаем гусей и крохалей, ищем следы сапсана.',
       },
       {
-        eventId: expedition.id,
+        expeditionId: expedition.id,
         dayNumber: 4,
         title: 'Фоторабота и дневёвка',
         description: 'Свободное время для съёмки. Лекция по идентификации хищных птиц в полёте.',
       },
       {
-        eventId: expedition.id,
+        expeditionId: expedition.id,
         dayNumber: 5,
         title: 'Перевал Кату-Ярык',
         description: 'Сложный ходовой день. Шанс увидеть балобана и кречета над ущельем.',
       },
       {
-        eventId: expedition.id,
+        expeditionId: expedition.id,
         dayNumber: 6,
         title: 'Долина Чулышман',
         description: 'Наблюдение за колонией стервятников. Вечерний костёр и разбор фотографий.',
       },
       {
-        eventId: expedition.id,
+        expeditionId: expedition.id,
         dayNumber: 7,
         title: 'Возвращение в базовый лагерь',
         description: 'Обратный переход. Сводный список видов экспедиции, итоговая лекция.',
       },
       {
-        eventId: expedition.id,
+        expeditionId: expedition.id,
         dayNumber: 8,
         title: 'Отлёт',
         description: 'Трансфер в аэропорт Горно-Алтайска.',
