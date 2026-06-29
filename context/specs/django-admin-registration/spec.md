@@ -78,7 +78,7 @@ class TeamMemberAdmin(admin.ModelAdmin):
 
 ### `block_users` and `unblock_users`
 
-- Available to all Django staff (`is_staff = True`), i.e., both ADMIN and SUPERADMIN.
+- Available to all logged-in admins — both ADMIN (`is_staff=True, is_superuser=False`) and SUPERADMIN (`is_staff=True, is_superuser=True`).
 - `block_users`: sets `blockedAt = now()` on all selected `AppUser` rows.
   - Guard: if the selection includes the last active (non-deleted, non-blocked) SUPERADMIN (`role = 'SUPERADMIN'`), reject with `messages.error` and do not update any rows.
 - `unblock_users`: sets `blockedAt = None` on all selected `AppUser` rows.
@@ -128,14 +128,14 @@ Hide Django's own `auth` app from the sidebar using `hide_apps: ['auth']` in `JA
 
 ## Success criteria
 
-- [ ] GET `/admin/birdwatch/walk/` as a logged-in staff or superuser returns HTTP 200 and includes the title of at least one seeded walk.
-- [ ] GET `/admin/birdwatch/expedition/` as a logged-in superuser returns HTTP 200 and includes the title of the seeded expedition.
-- [ ] GET `/admin/birdwatch/request/` as a logged-in superuser returns HTTP 200.
-- [ ] GET `/admin/birdwatch/appuser/` as a logged-in superuser returns HTTP 200 and shows at least one user row.
-- [ ] GET `/admin/birdwatch/teammember/` as a logged-in superuser returns HTTP 200.
+- [ ] GET `/admin/birdwatch/walk/` as ADMIN or SUPERADMIN returns HTTP 200 and includes the title of at least one seeded walk.
+- [ ] GET `/admin/birdwatch/expedition/` as ADMIN or SUPERADMIN returns HTTP 200 and includes the title of the seeded expedition.
+- [ ] GET `/admin/birdwatch/request/` as ADMIN or SUPERADMIN returns HTTP 200.
+- [ ] GET `/admin/birdwatch/appuser/` as ADMIN or SUPERADMIN returns HTTP 200 and shows at least one user row.
+- [ ] GET `/admin/birdwatch/teammember/` as ADMIN or SUPERADMIN returns HTTP 200.
 - [ ] The sidebar visible after login contains the items **Прогулки, Экспедиции, Заявки, Пользователи, Команда** in that order. Django's auth group is absent from the sidebar.
-- [ ] The action dropdown on the AppUser changelist includes **"Изменить роль"** when the logged-in Django user is a superuser.
-- [ ] The action dropdown on the AppUser changelist does **not** include **"Изменить роль"** when the logged-in Django user is staff-but-not-superuser.
+- [ ] The action dropdown on the AppUser changelist includes **"Изменить роль"** when the logged-in user is SUPERADMIN.
+- [ ] The action dropdown on the AppUser changelist does **not** include **"Изменить роль"** when the logged-in user is ADMIN (not SUPERADMIN).
 - [ ] Invoking `change_role` on a target user and confirming a new role: `AppUser.role` is updated in the database AND a `RoleChangeLog` row exists with matching `targetUserId`, `changedByUserId`, `fromRole`, `toRole`.
 - [ ] Attempting to downgrade the only remaining SUPERADMIN via `change_role` returns an error message and does not change the role.
 - [ ] Invoking `block_users` sets `blockedAt` to a non-null timestamp on the selected rows.
