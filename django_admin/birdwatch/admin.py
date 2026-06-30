@@ -40,12 +40,6 @@ class RequestAdmin(admin.ModelAdmin):
         return False
 
 
-def _active_superadmin_count():
-    return AppUser.objects.filter(
-        role='SUPERADMIN', deletedAt__isnull=True, blockedAt__isnull=True
-    ).count()
-
-
 @admin.register(AppUser)
 class AppUserAdmin(admin.ModelAdmin):
     list_display = ['name', 'email', 'role', 'blockedAt', 'createdAt', 'deletedAt']

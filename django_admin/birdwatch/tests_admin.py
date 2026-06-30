@@ -238,6 +238,14 @@ class ChangeRoleActionTest(SimpleTestCase):
         )
 
     @patch('birdwatch.admin.AppUser.objects')
+    def test_change_role_aborts_when_no_role_selected(self, mock_mgr):
+        # apply in POST but new_role missing — should abort before any DB call
+        request = self._superuser_request(post={'apply': '1'})
+        queryset = MagicMock()
+        self.app_user_admin.change_role(request, queryset)
+        mock_mgr.get.assert_not_called()
+
+    @patch('birdwatch.admin.AppUser.objects')
     def test_change_role_aborts_if_changer_app_user_not_found(self, mock_mgr):
         mock_mgr.get.side_effect = AppUser.DoesNotExist
 
