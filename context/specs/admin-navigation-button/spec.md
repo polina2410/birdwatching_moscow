@@ -8,6 +8,21 @@
 
 ## What to build
 
+### Testing approach
+
+- `app/page.tsx` tests must mock `@/lib/auth` so that `auth()` returns a controlled value instead of reading JWT cookies from request headers (which do not exist in Vitest):
+  ```ts
+  vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
+  // then per test:
+  vi.mocked(auth).mockResolvedValue({ user: { id: '1', name: 'Test', email: 'a@b.com', role: 'ADMIN' } })
+  ```
+- The async server component is awaited before rendering:
+  ```ts
+  const jsx = await Home()
+  const { getByRole } = render(jsx)
+  ```
+- `next.config.ts` tests call `nextConfig.rewrites()` directly and assert on the returned array; `process.env.NODE_ENV` is set per test via `vi.stubEnv` or by overriding `process.env.NODE_ENV` before the call.
+
 ### "Админка" button on `app/page.tsx`
 
 - `app/page.tsx` becomes an `async` Server Component.
@@ -46,8 +61,8 @@ This rewrite is **development-only**. In production, nginx routes `/admin/` dire
 - [ ] When rendered with `role = 'SUPERADMIN'`, same result.
 - [ ] When rendered with `role = 'USER'`, no element with `href="/admin/"` is present in the rendered HTML.
 - [ ] When rendered with `session = null` (unauthenticated), no element with `href="/admin/"` is present.
-- [ ] In development (`NODE_ENV=development`), a GET request to `http://localhost:3000/admin/` is proxied to `http://localhost:8000/admin/` and returns the Django admin response.
-- [ ] In production (`NODE_ENV=production`), `next.config.ts` `rewrites()` returns an empty array (the proxy is inactive; nginx handles routing).
+- [ ] Calling `nextConfig.rewrites()` with `NODE_ENV=development` returns `[{ source: '/admin/:path*', destination: 'http://localhost:8000/admin/:path*' }]`.
+- [ ] Calling `nextConfig.rewrites()` with `NODE_ENV=production` returns an empty array (the proxy is inactive; nginx handles routing).
 
 ---
 
