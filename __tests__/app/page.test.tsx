@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import type { Session } from 'next-auth'
+import type { Role } from '@/generated/prisma/client'
 import Home from '@/app/page'
 import { auth } from '@/lib/auth'
 
@@ -9,9 +11,11 @@ function mockSession(role: string | null) {
   if (role === null) {
     vi.mocked(auth).mockResolvedValue(null)
   } else {
-    vi.mocked(auth).mockResolvedValue({
-      user: { id: '1', name: 'Test', email: 'a@b.com', role },
-    } as any)
+    const session: Session = {
+      user: { id: '1', name: 'Test', email: 'a@b.com', role: role as Role },
+      expires: '2099-01-01T00:00:00.000Z',
+    }
+    vi.mocked(auth).mockResolvedValue(session)
   }
 }
 
