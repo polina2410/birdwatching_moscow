@@ -161,3 +161,21 @@ Converted `app/page.tsx` to an async Server Component that calls `auth()` and co
 ### Summary
 
 Made Django admin production-ready on the Selectel VPS. Settings now read `DEBUG`, `SECRET_KEY`, and `ALLOWED_HOSTS` from environment variables. Two `ImproperlyConfigured` guards prevent startup when `DJANGO_DEBUG=false` and either `DJANGO_ALLOWED_HOSTS` or `DJANGO_SECRET_KEY` is missing. `STATIC_URL` changed from relative `'static/'` to absolute `'/static/'`; `STATIC_ROOT` added at `BASE_DIR / 'staticfiles'`. `USE_X_FORWARDED_HOST = True` and `SECURE_PROXY_SSL_HEADER` configured so nginx proxy headers are trusted. `gunicorn>=22.0` added to `requirements.txt`. 13 unit tests using `SimpleTestCase` (no live DB required); run with `DJANGO_DEBUG=true DATABASE_URL=<url> python manage.py test birdwatch`.
+
+---
+
+## Django Admin CRUD
+
+**Branch:** django-admin-crud
+**Completed:** 2026-06-30
+
+### Goals
+
+- Walk CRUD: create/edit/delete with auto UUID, auto slug from title, auto `createdAt`; publish/cancel/restore bulk actions
+- Expedition CRUD: create/edit/delete with auto UUID, auto slug, auto `createdAt`, `spotsLeft` initialised to `totalSpots`; `ExpeditionDay` managed as inline; publish/cancel/restore bulk actions
+- TeamMember CRUD: create/edit/delete with `profileLinks` array handled via newline-separated textarea
+- Request: `toggle_status` bulk action (NEW ↔ WAITLIST); add/delete remain disabled
+
+### Summary
+
+Expanded Django admin to replace the previously removed Next.js admin panel. `WalkAdmin` and `ExpeditionAdmin` both override `save_model` to auto-generate UUID primary keys, slugs (from title via `slugify` with uniqueness retry), and `createdAt` timestamps on creation. `ExpeditionAdmin` also initialises `spotsLeft = totalSpots` on create and manages `ExpeditionDay` rows via `ExpeditionDayInline` (UUID-generated in `save_formset`). Both models get publish/cancel/restore bulk actions that update `status`, `publishedAt`, and `publishedBy`. `TeamMemberAdmin` uses a custom `TeamMemberForm` that exposes `profileLinks` as a newline-separated textarea, converting to/from the PostgreSQL array on save. `RequestAdmin` gains a `toggle_status` action (NEW ↔ WAITLIST) while keeping add/delete disabled. 24 `SimpleTestCase` tests, no live DB required.
