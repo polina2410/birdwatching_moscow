@@ -109,3 +109,21 @@ Replaced the polymorphic `Event` model with `Walk` (ticketed, single guide FK) a
 ### Summary
 
 Created the full `django_admin/` project: Django 5, jazzmin, psycopg2-binary, bcrypt. Settings parse `DATABASE_URL` manually; `MIGRATION_MODULES = {'birdwatch': None}` prevents Django from touching Prisma-managed tables. Seven `managed=False` models mirror Walk, Expedition (M2M guides via `_ExpeditionToTeamMember`), ExpeditionDay, AppUser, TeamMember, Request, and RoleChangeLog. `AppUserAuthBackend` looks up by email with deleted/blocked filters, verifies bcrypt hash, gates on ADMIN/SUPERADMIN role, and syncs `is_superuser` on every login. 11 unit tests using `SimpleTestCase` (no live DB required).
+
+---
+
+## Django Admin Registration
+
+**Branch:** django-admin-registration
+**Completed:** 2026-06-30
+
+### Goals
+
+- Register admin classes for Walk, Expedition, Request, AppUser, and TeamMember
+- Russian verbose names and sidebar ordering via Jazzmin
+- `block_users` / `unblock_users` actions available to all staff (ADMIN + SUPERADMIN)
+- `change_role` action (SUPERADMIN only) with intermediate form, own-account skip, last-SUPERADMIN guard, and `RoleChangeLog` insert
+
+### Summary
+
+Implemented five `ModelAdmin` classes in `django_admin/birdwatch/admin.py`. `WalkAdmin` includes a `price_roubles` computed column (kopecks ÷ 100). `RequestAdmin` and `AppUserAdmin` disable add/delete. `AppUserAdmin` exposes three bulk actions: `block_users` (all-or-nothing last-SUPERADMIN guard), `unblock_users`, and `change_role` (SUPERADMIN-only, intermediate `TemplateResponse` form, per-row skip for own account and last-SUPERADMIN, UUID-keyed `RoleChangeLog` inserts). `get_actions` override strips `change_role` from the dropdown for non-superuser staff. 26 unit tests using `SimpleTestCase` with full mocking — no live DB required.
