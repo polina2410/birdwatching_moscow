@@ -1,0 +1,26 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<h1>Изменить роль</h1>
+<p>Выберите новую роль для выбранных пользователей:</p>
+
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="change_role">
+  {% for obj in queryset %}
+    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}">
+  {% endfor %}
+
+  <select name="new_role" required>
+    {% for role in roles %}
+      <option value="{{ role }}">{{ role }}</option>
+    {% endfor %}
+  </select>
+
+  <p>
+    <button type="submit" name="apply" value="1" class="button default">Применить</button>
+    <a href="../" class="button cancel-link">Отмена</a>
+  </p>
+</form>
+{% endblock %}
