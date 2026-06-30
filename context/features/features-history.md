@@ -127,3 +127,19 @@ Created the full `django_admin/` project: Django 5, jazzmin, psycopg2-binary, bc
 ### Summary
 
 Implemented five `ModelAdmin` classes in `django_admin/birdwatch/admin.py`. `WalkAdmin` includes a `price_roubles` computed column (kopecks ÷ 100). `RequestAdmin` and `AppUserAdmin` disable add/delete. `AppUserAdmin` exposes three bulk actions: `block_users` (all-or-nothing last-SUPERADMIN guard), `unblock_users`, and `change_role` (SUPERADMIN-only, intermediate `TemplateResponse` form, per-row skip for own account and last-SUPERADMIN, UUID-keyed `RoleChangeLog` inserts). `get_actions` override strips `change_role` from the dropdown for non-superuser staff. 26 unit tests using `SimpleTestCase` with full mocking — no live DB required.
+
+---
+
+## Admin Navigation Button
+
+**Branch:** admin-navigation-button
+**Completed:** 2026-06-30
+
+### Goals
+
+- ADMIN and SUPERADMIN see `<a href="/admin/">Админка</a>` on the homepage; USER and unauthenticated users see nothing
+- Dev-only `next.config.ts` rewrite proxies `/admin/:path*` to `http://localhost:8000/admin/:path*`
+
+### Summary
+
+Converted `app/page.tsx` to an async Server Component that calls `auth()` and conditionally renders the Django admin link for privileged roles. Added a dev-only `rewrites()` entry to `next.config.ts` (returns empty array in production/test). Added `__tests__/setup.ts` with global `afterEach(cleanup)` to fix Testing Library DOM accumulation across tests (needed because `vi.globals` is not enabled). Auth mock uses `auth as unknown as Mock<() => Promise<Session | null>>` to resolve Auth.js v5 overload ambiguity in `tsc --noEmit`.
