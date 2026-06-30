@@ -1,13 +1,26 @@
 import os
 import urllib.parse
+from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
 
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-secret-key-change-in-production')
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'false').lower() == 'true'
 
-ALLOWED_HOSTS = ['*']
+_DEV_KEY = 'dev-secret-key-change-in-production'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', _DEV_KEY)
+if not DEBUG and SECRET_KEY == _DEV_KEY:
+    raise ImproperlyConfigured(
+        'Set DJANGO_SECRET_KEY to a real secret in production'
+    )
+
+_allowed = os.environ.get('DJANGO_ALLOWED_HOSTS', '')
+if not DEBUG and not _allowed:
+    raise ImproperlyConfigured(
+        'DJANGO_ALLOWED_HOSTS must be set when DEBUG is false'
+    )
+ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()] if _allowed else ['*']
 
 _DATABASE_URL = os.environ.get('DATABASE_URL')
 if not _DATABASE_URL:
@@ -75,7 +88,11 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATIC_URL = 'static/'
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

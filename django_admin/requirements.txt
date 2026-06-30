@@ -2,3 +2,4 @@ django>=5.0,<6.0
 psycopg2-binary
 django-jazzmin
 bcrypt
+gunicorn>=22.0
