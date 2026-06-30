@@ -6,6 +6,26 @@ from birdwatch.models import AppUser
 _ADMIN_ROLES = {'ADMIN', 'SUPERADMIN'}
 
 
+class BirdwatchPermissionsBackend:
+    """Grant all active staff full access to birdwatch models.
+
+    birdwatch models are managed=False so Django never writes permission rows
+    for them. Without this backend, non-superuser ADMIN staff fail the
+    has_module_perms check and see an empty admin.
+    """
+
+    def has_module_perms(self, user_obj, app_label):
+        return bool(
+            user_obj.is_active and user_obj.is_staff and app_label == 'birdwatch'
+        )
+
+    def has_perm(self, user_obj, perm, obj=None):
+        app_label = perm.partition('.')[0]
+        return bool(
+            user_obj.is_active and user_obj.is_staff and app_label == 'birdwatch'
+        )
+
+
 class AppUserAuthBackend:
     def authenticate(self, request, username=None, password=None):
         try:
