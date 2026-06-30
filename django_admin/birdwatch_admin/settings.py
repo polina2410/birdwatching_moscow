@@ -98,7 +98,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MIGRATION_MODULES = {'birdwatch': None}
 
-AUTHENTICATION_BACKENDS = ['birdwatch.backends.AppUserAuthBackend']
+AUTHENTICATION_BACKENDS = [
+    'birdwatch.backends.AppUserAuthBackend',
+    'birdwatch.backends.BirdwatchPermissionsBackend',
+]
 
 JAZZMIN_SETTINGS = {
     'site_title': 'Birdwatching Moscow Admin',

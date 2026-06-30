@@ -7,7 +7,41 @@ from django.core.exceptions import PermissionDenied
 from birdwatch.admin import (
     WalkAdmin, ExpeditionAdmin, RequestAdmin, AppUserAdmin, TeamMemberAdmin,
 )
+from birdwatch.backends import BirdwatchPermissionsBackend
 from birdwatch.models import Walk, Expedition, Request, AppUser, TeamMember
+
+
+# ---------------------------------------------------------------------------
+# BirdwatchPermissionsBackend
+# ---------------------------------------------------------------------------
+
+class BirdwatchPermissionsBackendTest(SimpleTestCase):
+    def setUp(self):
+        self.backend = BirdwatchPermissionsBackend()
+        self.staff_user = MagicMock(is_active=True, is_staff=True)
+        self.inactive_user = MagicMock(is_active=False, is_staff=True)
+        self.non_staff_user = MagicMock(is_active=True, is_staff=False)
+
+    def test_has_module_perms_grants_staff_access_to_birdwatch(self):
+        self.assertTrue(self.backend.has_module_perms(self.staff_user, 'birdwatch'))
+
+    def test_has_module_perms_denies_inactive_user(self):
+        self.assertFalse(self.backend.has_module_perms(self.inactive_user, 'birdwatch'))
+
+    def test_has_module_perms_denies_non_staff(self):
+        self.assertFalse(self.backend.has_module_perms(self.non_staff_user, 'birdwatch'))
+
+    def test_has_module_perms_ignores_other_apps(self):
+        self.assertFalse(self.backend.has_module_perms(self.staff_user, 'auth'))
+
+    def test_has_perm_grants_staff_birdwatch_perm(self):
+        self.assertTrue(self.backend.has_perm(self.staff_user, 'birdwatch.view_walk'))
+
+    def test_has_perm_denies_non_birdwatch_perm(self):
+        self.assertFalse(self.backend.has_perm(self.staff_user, 'auth.view_user'))
+
+    def test_has_perm_denies_inactive_user(self):
+        self.assertFalse(self.backend.has_perm(self.inactive_user, 'birdwatch.view_walk'))
 
 
 # ---------------------------------------------------------------------------
