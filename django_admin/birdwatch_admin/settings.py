@@ -106,6 +106,7 @@ AUTHENTICATION_BACKENDS = [
 JAZZMIN_SETTINGS = {
     'site_title': 'Birdwatching Moscow Admin',
     'site_header': 'Birdwatching Moscow',
+    'custom_css': 'birdwatch/css/admin_custom.css',
     'order_with_respect_to': [
         'birdwatch.walk',
         'birdwatch.expedition',

@@ -1,0 +1,19 @@
+.main-sidebar {
+    width: 320px;
+}
+
+.content-wrapper,
+.main-footer,
+.main-header {
+    margin-left: 320px;
+}
+
+.sidebar-collapse .main-sidebar {
+    width: 4.6rem;
+}
+
+.sidebar-collapse .content-wrapper,
+.sidebar-collapse .main-footer,
+.sidebar-collapse .main-header {
+    margin-left: 4.6rem;
+}
