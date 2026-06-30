@@ -141,19 +141,6 @@ class ExpeditionDayInline(admin.StackedInline):
     ordering = ['dayNumber']
     readonly_fields = ['id']
 
-    def save_new_objects(self, formset, commit=True):
-        saved = []
-        for form in formset.extra_forms:
-            if not form.has_changed():
-                continue
-            obj = form.save(commit=False)
-            if not obj.id:
-                obj.id = str(uuid.uuid4())
-            if commit:
-                obj.save()
-            saved.append(obj)
-        return saved
-
 
 @admin.register(Expedition)
 class ExpeditionAdmin(admin.ModelAdmin):

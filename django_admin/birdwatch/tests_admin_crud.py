@@ -4,6 +4,7 @@ All tests use SimpleTestCase — no live DB required.
 Run: DJANGO_DEBUG=true DATABASE_URL="postgresql://user:pass@localhost:5432/testdb" python manage.py test birdwatch.tests_admin_crud
 """
 import inspect
+from unittest.mock import MagicMock, patch
 
 from django.contrib import admin
 from django.test import SimpleTestCase
@@ -12,6 +13,7 @@ from birdwatch.admin import (
     ExpeditionAdmin,
     RequestAdmin,
     TeamMemberAdmin,
+    TeamMemberForm,
     WalkAdmin,
 )
 from birdwatch.models import Expedition, Request, TeamMember, Walk
@@ -170,3 +172,53 @@ class RequestAdminToggleStatusTest(SimpleTestCase):
             ra.has_add_permission(FakeRequest()),
             'RequestAdmin must still block adding new requests',
         )
+
+    def test_toggle_status_new_becomes_waitlist(self):
+        ra = RequestAdmin(Request, admin.site)
+        obj = MagicMock()
+        obj.status = 'NEW'
+        ra.toggle_status(MagicMock(), [obj])
+        self.assertEqual(obj.status, 'WAITLIST')
+        obj.save.assert_called_once()
+
+    def test_toggle_status_waitlist_becomes_new(self):
+        ra = RequestAdmin(Request, admin.site)
+        obj = MagicMock()
+        obj.status = 'WAITLIST'
+        ra.toggle_status(MagicMock(), [obj])
+        self.assertEqual(obj.status, 'NEW')
+        obj.save.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# TeamMemberForm profileLinks parsing
+# ---------------------------------------------------------------------------
+
+class TeamMemberFormProfileLinksTest(SimpleTestCase):
+    def _make_form(self, text):
+        return TeamMemberForm(data={
+            'name': 'Иван Иванов',
+            'photoUrl': 'http://example.com/photo.jpg',
+            'sortOrder': 1,
+            'education': '',
+            'achievements': '',
+            'profile_links_text': text,
+        })
+
+    def test_links_parsed_from_newlines(self):
+        form = self._make_form('http://link1.com\nhttp://link2.com\n')
+        self.assertTrue(form.is_valid(), form.errors)
+        instance = form.save(commit=False)
+        self.assertEqual(instance.profileLinks, ['http://link1.com', 'http://link2.com'])
+
+    def test_blank_lines_ignored(self):
+        form = self._make_form('http://link1.com\n\n  \nhttp://link2.com')
+        self.assertTrue(form.is_valid(), form.errors)
+        instance = form.save(commit=False)
+        self.assertEqual(instance.profileLinks, ['http://link1.com', 'http://link2.com'])
+
+    def test_empty_text_produces_empty_list(self):
+        form = self._make_form('')
+        self.assertTrue(form.is_valid(), form.errors)
+        instance = form.save(commit=False)
+        self.assertEqual(instance.profileLinks, [])
