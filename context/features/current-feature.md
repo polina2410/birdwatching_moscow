@@ -1,7 +1,7 @@
 # Current Feature: django-admin-registration
 
 ## Status
-Not Started
+In Progress
 
 ## Goals
 
