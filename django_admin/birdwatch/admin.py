@@ -1,12 +1,94 @@
 import uuid
 
+from django import forms
 from django.contrib import admin, messages
+from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import PermissionDenied
+from django.db import models
 from django.template.response import TemplateResponse
 from django.utils import timezone
+from django.utils.text import slugify
 
-from birdwatch.models import AppUser, Expedition, Request, RoleChangeLog, TeamMember, Walk
+from birdwatch.models import (
+    AppUser,
+    EventStatus,
+    Expedition,
+    ExpeditionDay,
+    Request,
+    RequestStatus,
+    RoleChangeLog,
+    TeamMember,
+    Walk,
+)
 
+
+# ---------------------------------------------------------------------------
+# Shared helpers
+# ---------------------------------------------------------------------------
+
+def _unique_slug(model_class, title, exclude_pk=None):
+    base = slugify(title, allow_unicode=False) or str(uuid.uuid4())[:8]
+    slug = base
+    n = 1
+    while True:
+        qs = model_class.objects.filter(slug=slug)
+        if exclude_pk:
+            qs = qs.exclude(pk=exclude_pk)
+        if not qs.exists():
+            return slug
+        slug = f'{base}-{n}'
+        n += 1
+
+
+def _publisher_id(request):
+    try:
+        return AppUser.objects.get(email=request.user.email).id
+    except AppUser.DoesNotExist:
+        return None
+
+
+# ---------------------------------------------------------------------------
+# TeamMember
+# ---------------------------------------------------------------------------
+
+class TeamMemberForm(forms.ModelForm):
+    profile_links_text = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 4}),
+        required=False,
+        label='Ссылки на профили (по одной на строке)',
+    )
+
+    class Meta:
+        model = TeamMember
+        exclude = ['profileLinks']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields['profile_links_text'].initial = '\n'.join(
+                self.instance.profileLinks or []
+            )
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        raw = self.cleaned_data.get('profile_links_text', '')
+        instance.profileLinks = [ln.strip() for ln in raw.splitlines() if ln.strip()]
+        if commit:
+            instance.save()
+        return instance
+
+
+@admin.register(TeamMember)
+class TeamMemberAdmin(admin.ModelAdmin):
+    form = TeamMemberForm
+    list_display = ['name', 'sortOrder']
+    ordering = ['sortOrder']
+    search_fields = ['name']
+
+
+# ---------------------------------------------------------------------------
+# Walk
+# ---------------------------------------------------------------------------
 
 @admin.register(Walk)
 class WalkAdmin(admin.ModelAdmin):
@@ -14,11 +96,63 @@ class WalkAdmin(admin.ModelAdmin):
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
     ordering = ['-startsAt']
+    readonly_fields = ['id', 'createdAt', 'publishedAt', 'publishedBy']
+    actions = ['publish_walks', 'cancel_walks', 'restore_walks']
 
     def price_roubles(self, obj):
         return f'{obj.priceKopecks // 100} ₽'
 
     price_roubles.short_description = 'Цена'
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.id = obj.id or str(uuid.uuid4())
+            if not obj.slug:
+                obj.slug = _unique_slug(Walk, obj.title)
+            obj.createdAt = timezone.now()
+        elif not obj.slug:
+            obj.slug = _unique_slug(Walk, obj.title, exclude_pk=obj.pk)
+        super().save_model(request, obj, form, change)
+
+    @admin.action(description='Опубликовать')
+    def publish_walks(self, request, queryset):
+        queryset.update(
+            status=EventStatus.ACTIVE,
+            publishedAt=timezone.now(),
+            publishedBy=_publisher_id(request),
+        )
+
+    @admin.action(description='Отменить')
+    def cancel_walks(self, request, queryset):
+        queryset.update(status=EventStatus.CANCELLED)
+
+    @admin.action(description='Вернуть в черновики')
+    def restore_walks(self, request, queryset):
+        queryset.update(status=EventStatus.DRAFT)
+
+
+# ---------------------------------------------------------------------------
+# Expedition
+# ---------------------------------------------------------------------------
+
+class ExpeditionDayInline(admin.StackedInline):
+    model = ExpeditionDay
+    extra = 1
+    ordering = ['dayNumber']
+    readonly_fields = ['id']
+
+    def save_new_objects(self, formset, commit=True):
+        saved = []
+        for form in formset.extra_forms:
+            if not form.has_changed():
+                continue
+            obj = form.save(commit=False)
+            if not obj.id:
+                obj.id = str(uuid.uuid4())
+            if commit:
+                obj.save()
+            saved.append(obj)
+        return saved
 
 
 @admin.register(Expedition)
@@ -27,7 +161,51 @@ class ExpeditionAdmin(admin.ModelAdmin):
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
     ordering = ['-startsAt']
+    readonly_fields = ['id', 'createdAt', 'publishedAt', 'publishedBy', 'spotsLeft']
+    inlines = [ExpeditionDayInline]
+    actions = ['publish_expeditions', 'cancel_expeditions', 'restore_expeditions']
 
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.id = obj.id or str(uuid.uuid4())
+            if not obj.slug:
+                obj.slug = _unique_slug(Expedition, obj.title)
+            obj.createdAt = timezone.now()
+            obj.spotsLeft = obj.totalSpots
+        elif not obj.slug:
+            obj.slug = _unique_slug(Expedition, obj.title, exclude_pk=obj.pk)
+        super().save_model(request, obj, form, change)
+
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for instance in instances:
+            if isinstance(instance, ExpeditionDay) and not instance.id:
+                instance.id = str(uuid.uuid4())
+            instance.save()
+        formset.save_m2m()
+        for obj in formset.deleted_objects:
+            obj.delete()
+
+    @admin.action(description='Опубликовать')
+    def publish_expeditions(self, request, queryset):
+        queryset.update(
+            status=EventStatus.ACTIVE,
+            publishedAt=timezone.now(),
+            publishedBy=_publisher_id(request),
+        )
+
+    @admin.action(description='Отменить')
+    def cancel_expeditions(self, request, queryset):
+        queryset.update(status=EventStatus.CANCELLED)
+
+    @admin.action(description='Вернуть в черновики')
+    def restore_expeditions(self, request, queryset):
+        queryset.update(status=EventStatus.DRAFT)
+
+
+# ---------------------------------------------------------------------------
+# Request
+# ---------------------------------------------------------------------------
 
 @admin.register(Request)
 class RequestAdmin(admin.ModelAdmin):
@@ -35,10 +213,25 @@ class RequestAdmin(admin.ModelAdmin):
     list_filter = ['type', 'status']
     search_fields = ['name', 'email']
     readonly_fields = ['id', 'type', 'expedition', 'name', 'email', 'message', 'createdAt']
+    actions = ['toggle_status']
 
     def has_add_permission(self, request):
         return False
 
+    @admin.action(description='Переключить статус (NEW ↔ WAITLIST)')
+    def toggle_status(self, request, queryset):
+        for obj in queryset:
+            obj.status = (
+                RequestStatus.WAITLIST
+                if obj.status == RequestStatus.NEW
+                else RequestStatus.NEW
+            )
+            obj.save()
+
+
+# ---------------------------------------------------------------------------
+# AppUser
+# ---------------------------------------------------------------------------
 
 @admin.register(AppUser)
 class AppUserAdmin(admin.ModelAdmin):
@@ -149,10 +342,3 @@ class AppUserAdmin(admin.ModelAdmin):
                 toRole=new_role,
                 createdAt=timezone.now(),
             )
-
-
-@admin.register(TeamMember)
-class TeamMemberAdmin(admin.ModelAdmin):
-    list_display = ['name', 'sortOrder']
-    ordering = ['sortOrder']
-    search_fields = ['name']
