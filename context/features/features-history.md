@@ -143,3 +143,21 @@ Implemented five `ModelAdmin` classes in `django_admin/birdwatch/admin.py`. `Wal
 ### Summary
 
 Converted `app/page.tsx` to an async Server Component that calls `auth()` and conditionally renders the Django admin link for privileged roles. Added a dev-only `rewrites()` entry to `next.config.ts` (returns empty array in production/test). Added `__tests__/setup.ts` with global `afterEach(cleanup)` to fix Testing Library DOM accumulation across tests (needed because `vi.globals` is not enabled). Auth mock uses `auth as unknown as Mock<() => Promise<Session | null>>` to resolve Auth.js v5 overload ambiguity in `tsc --noEmit`.
+
+---
+
+## Django Production Deploy
+
+**Branch:** django-production-deploy
+**Completed:** 2026-06-30
+
+### Goals
+
+- Env-driven `DEBUG`, `SECRET_KEY`, and `ALLOWED_HOSTS` with startup guards when `DEBUG=false`
+- `STATIC_ROOT = BASE_DIR / 'staticfiles'` and absolute `STATIC_URL = '/static/'` for collectstatic
+- `USE_X_FORWARDED_HOST` and `SECURE_PROXY_SSL_HEADER` for nginx reverse-proxy
+- `gunicorn>=22.0` in `requirements.txt`
+
+### Summary
+
+Made Django admin production-ready on the Selectel VPS. Settings now read `DEBUG`, `SECRET_KEY`, and `ALLOWED_HOSTS` from environment variables. Two `ImproperlyConfigured` guards prevent startup when `DJANGO_DEBUG=false` and either `DJANGO_ALLOWED_HOSTS` or `DJANGO_SECRET_KEY` is missing. `STATIC_URL` changed from relative `'static/'` to absolute `'/static/'`; `STATIC_ROOT` added at `BASE_DIR / 'staticfiles'`. `USE_X_FORWARDED_HOST = True` and `SECURE_PROXY_SSL_HEADER` configured so nginx proxy headers are trusted. `gunicorn>=22.0` added to `requirements.txt`. 13 unit tests using `SimpleTestCase` (no live DB required); run with `DJANGO_DEBUG=true DATABASE_URL=<url> python manage.py test birdwatch`.
