@@ -74,6 +74,26 @@ admin.site.index_title = 'Панель администратора'
 
 
 # ---------------------------------------------------------------------------
+# Widgets / mixins
+# ---------------------------------------------------------------------------
+
+class DateTimeLocalInput(forms.DateTimeInput):
+    """Native browser datetime-local picker — supports year selection."""
+    input_type = 'datetime-local'
+
+
+class DateTimeLocalMixin:
+    """Apply DateTimeLocalInput to every editable DateTimeField on the model."""
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if isinstance(db_field, models.DateTimeField):
+            kwargs['widget'] = DateTimeLocalInput(format='%Y-%m-%dT%H:%M')
+        field = super().formfield_for_dbfield(db_field, request, **kwargs)
+        if field and isinstance(db_field, models.DateTimeField):
+            field.input_formats = ['%Y-%m-%dT%H:%M']
+        return field
+
+
+# ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
 
@@ -142,7 +162,7 @@ class TeamMemberAdmin(admin.ModelAdmin):
 # ---------------------------------------------------------------------------
 
 @admin.register(Walk)
-class WalkAdmin(admin.ModelAdmin):
+class WalkAdmin(DateTimeLocalMixin, admin.ModelAdmin):
     list_display = ['title', 'startsAt', 'colored_status', 'location', 'price_roubles', 'capacity']
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
@@ -218,7 +238,7 @@ class ExpeditionDayInline(admin.StackedInline):
 
 
 @admin.register(Expedition)
-class ExpeditionAdmin(admin.ModelAdmin):
+class ExpeditionAdmin(DateTimeLocalMixin, admin.ModelAdmin):
     form = ExpeditionForm
     list_display = ['title', 'startsAt', 'colored_status', 'totalSpots', 'spotsLeft', 'location']
     list_filter = ['status']
