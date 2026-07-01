@@ -73,7 +73,8 @@ class Walk(models.Model):
 class ExpeditionToTeamMember(models.Model):
     # Through table for Expedition <-> TeamMember M2M (_ExpeditionToTeamMember)
     # B column is INTEGER because TeamMember.id is SERIAL, not UUID
-    A = models.ForeignKey('Expedition', on_delete=models.CASCADE, db_column='A', related_name='+')
+    # primary_key=True prevents Django from generating a nonexistent "id" column in queries
+    A = models.ForeignKey('Expedition', on_delete=models.CASCADE, db_column='A', related_name='+', primary_key=True)
     B = models.ForeignKey(TeamMember, on_delete=models.CASCADE, db_column='B', related_name='+')
 
     class Meta:
