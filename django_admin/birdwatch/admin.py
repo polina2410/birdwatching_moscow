@@ -88,25 +88,25 @@ class DateInput(forms.DateInput):
 
 
 class DateTimeLocalMixin:
-    """Apply datetime-local picker to every editable DateTimeField."""
+    """Bypass admin's SplitDateTimeField; use a single datetime-local input."""
     def formfield_for_dbfield(self, db_field, request, **kwargs):
         if isinstance(db_field, models.DateTimeField):
-            kwargs['widget'] = DateTimeLocalInput(format='%Y-%m-%dT%H:%M')
-        field = super().formfield_for_dbfield(db_field, request, **kwargs)
-        if field and isinstance(db_field, models.DateTimeField):
-            field.input_formats = ['%Y-%m-%dT%H:%M']
-        return field
+            return db_field.formfield(
+                widget=DateTimeLocalInput(format='%Y-%m-%dT%H:%M'),
+                input_formats=['%Y-%m-%dT%H:%M'],
+            )
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
 
 
 class DateOnlyMixin:
-    """Apply date-only picker to every editable DateTimeField."""
+    """Bypass admin's SplitDateTimeField; use a single date-only input."""
     def formfield_for_dbfield(self, db_field, request, **kwargs):
         if isinstance(db_field, models.DateTimeField):
-            kwargs['widget'] = DateInput(format='%Y-%m-%d')
-        field = super().formfield_for_dbfield(db_field, request, **kwargs)
-        if field and isinstance(db_field, models.DateTimeField):
-            field.input_formats = ['%Y-%m-%d']
-        return field
+            return db_field.formfield(
+                widget=DateInput(format='%Y-%m-%d'),
+                input_formats=['%Y-%m-%d'],
+            )
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
 
 
 # ---------------------------------------------------------------------------
