@@ -2,6 +2,7 @@ import uuid
 
 from django import forms
 from django.contrib import admin, messages
+from django.utils.html import format_html
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import PermissionDenied
@@ -22,6 +23,25 @@ from birdwatch.models import (
     TeamMember,
     Walk,
 )
+
+_STATUS_PALETTE = {
+    'DRAFT':     ('#6c757d', '#fff'),
+    'ACTIVE':    ('#28a745', '#fff'),
+    'CANCELLED': ('#dc3545', '#fff'),
+    'DELETED':   ('#343a40', '#fff'),
+    'NEW':       ('#0d6efd', '#fff'),
+    'WAITLIST':  ('#fd7e14', '#fff'),
+}
+
+
+def _colored_status(obj):
+    bg, fg = _STATUS_PALETTE.get(obj.status, ('#6c757d', '#fff'))
+    return format_html(
+        '<span style="background:{};color:{};padding:2px 10px;'
+        'border-radius:4px;font-size:.85em;white-space:nowrap">{}</span>',
+        bg, fg, obj.get_status_display(),
+    )
+
 
 class BirdwatchAdminSite(admin.AdminSite):
     """Admin site with flat URLs: /admin/<model>/ instead of /admin/birdwatch/<model>/."""
@@ -51,6 +71,42 @@ admin.site.__class__ = BirdwatchAdminSite
 admin.site.site_header = 'Birdwatching Moscow'
 admin.site.site_title = 'BM'
 admin.site.index_title = 'Панель администратора'
+
+
+# ---------------------------------------------------------------------------
+# Widgets / mixins
+# ---------------------------------------------------------------------------
+
+class DateTimeLocalInput(forms.DateTimeInput):
+    """Native browser datetime-local picker (date + time)."""
+    input_type = 'datetime-local'
+
+
+class DateInput(forms.DateInput):
+    """Native browser date-only picker."""
+    input_type = 'date'
+
+
+class DateTimeLocalMixin:
+    """Bypass admin's SplitDateTimeField; use a single datetime-local input."""
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if isinstance(db_field, models.DateTimeField):
+            return db_field.formfield(
+                widget=DateTimeLocalInput(format='%Y-%m-%dT%H:%M'),
+                input_formats=['%Y-%m-%dT%H:%M'],
+            )
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
+
+
+class DateOnlyMixin:
+    """Bypass admin's SplitDateTimeField; use a single date-only input."""
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if isinstance(db_field, models.DateTimeField):
+            return db_field.formfield(
+                widget=DateInput(format='%Y-%m-%d'),
+                input_formats=['%Y-%m-%d'],
+            )
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -121,14 +177,45 @@ class TeamMemberAdmin(admin.ModelAdmin):
 # Walk
 # ---------------------------------------------------------------------------
 
+class WalkForm(forms.ModelForm):
+    price_roubles = forms.IntegerField(label='Цена, ₽', min_value=0)
+
+    class Meta:
+        model = Walk
+        exclude = ['priceKopecks']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields['price_roubles'].initial = self.instance.priceKopecks // 100
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.priceKopecks = self.cleaned_data['price_roubles'] * 100
+        if commit:
+            instance.save()
+        return instance
+
+
 @admin.register(Walk)
-class WalkAdmin(admin.ModelAdmin):
-    list_display = ['title', 'startsAt', 'status', 'location', 'price_roubles', 'capacity']
+class WalkAdmin(DateTimeLocalMixin, admin.ModelAdmin):
+    form = WalkForm
+    list_display = ['title', 'startsAt', 'colored_status', 'location', 'price_roubles', 'capacity']
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
     ordering = ['-startsAt']
     readonly_fields = ['id', 'createdAt', 'publishedAt', 'publishedBy']
+    fields = [
+        'slug', 'title', 'description', 'startsAt', 'duration',
+        'location', 'price_roubles', 'capacity', 'guide',
+        'status', 'coverPhotoUrl',
+        'id', 'createdAt', 'publishedAt', 'publishedBy',
+    ]
     actions = ['publish_walks', 'cancel_walks', 'restore_walks']
+
+    @admin.display(description='Статус')
+    def colored_status(self, obj):
+        return _colored_status(obj)
 
     def price_roubles(self, obj):
         return f'{obj.priceKopecks // 100} ₽'
@@ -167,23 +254,31 @@ class WalkAdmin(admin.ModelAdmin):
 # ---------------------------------------------------------------------------
 
 class ExpeditionForm(forms.ModelForm):
+    endsAt = forms.DateTimeField(
+        required=True,
+        label='Окончание',
+        widget=DateInput(format='%Y-%m-%d'),
+        input_formats=['%Y-%m-%d'],
+    )
+
     class Meta:
         model = Expedition
         fields = '__all__'
 
-    def clean_totalSpots(self):
-        new_total = self.cleaned_data.get('totalSpots')
-        if self.instance and self.instance.pk:
-            try:
-                current = Expedition.objects.get(pk=self.instance.pk)
-                booked = current.totalSpots - current.spotsLeft
-                if new_total < booked:
-                    raise forms.ValidationError(
-                        f'Нельзя уменьшить вместимость: уже забронировано {booked} мест.'
-                    )
-            except Expedition.DoesNotExist:
-                pass
-        return new_total
+    def clean(self):
+        cleaned_data = super().clean()
+        starts_at = cleaned_data.get('startsAt')
+        ends_at = cleaned_data.get('endsAt')
+        if starts_at and ends_at and starts_at >= ends_at:
+            self.add_error('endsAt', 'Дата окончания должна быть позже даты начала.')
+        spots_left = cleaned_data.get('spotsLeft')
+        total_spots = cleaned_data.get('totalSpots')
+        if spots_left is not None and total_spots is not None:
+            if spots_left < 0:
+                self.add_error('spotsLeft', 'Значение не может быть отрицательным.')
+            elif spots_left > total_spots:
+                self.add_error('spotsLeft', 'Не может превышать общее количество мест.')
+        return cleaned_data
 
 
 class ExpeditionDayInline(admin.StackedInline):
@@ -194,15 +289,25 @@ class ExpeditionDayInline(admin.StackedInline):
 
 
 @admin.register(Expedition)
-class ExpeditionAdmin(admin.ModelAdmin):
+class ExpeditionAdmin(DateOnlyMixin, admin.ModelAdmin):
     form = ExpeditionForm
-    list_display = ['title', 'startsAt', 'status', 'totalSpots', 'spotsLeft', 'location']
+    list_display = ['title', 'startsAt', 'colored_status', 'totalSpots', 'spotsLeft', 'location']
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
     ordering = ['-startsAt']
-    readonly_fields = ['id', 'createdAt', 'publishedAt', 'publishedBy', 'spotsLeft']
+    readonly_fields = ['id', 'createdAt', 'publishedAt', 'publishedBy']
+    fields = [
+        'slug', 'title', 'description', 'startsAt', 'endsAt',
+        'location', 'totalSpots', 'spotsLeft',
+        'status', 'coverPhotoUrl',
+        'id', 'createdAt', 'publishedAt', 'publishedBy',
+    ]
     inlines = [ExpeditionDayInline]
     actions = ['publish_expeditions', 'cancel_expeditions', 'restore_expeditions']
+
+    @admin.display(description='Статус')
+    def colored_status(self, obj):
+        return _colored_status(obj)
 
     def save_model(self, request, obj, form, change):
         if not change:
@@ -214,9 +319,6 @@ class ExpeditionAdmin(admin.ModelAdmin):
         else:
             if not obj.slug:
                 obj.slug = _unique_slug(Expedition, obj.title, exclude_pk=obj.pk)
-            original = Expedition.objects.get(pk=obj.pk)
-            booked = original.totalSpots - original.spotsLeft
-            obj.spotsLeft = obj.totalSpots - booked
         super().save_model(request, obj, form, change)
 
     def save_formset(self, request, form, formset, change):
@@ -252,7 +354,7 @@ class ExpeditionAdmin(admin.ModelAdmin):
 
 @admin.register(Request)
 class RequestAdmin(admin.ModelAdmin):
-    list_display = ['type', 'name', 'email', 'status', 'createdAt']
+    list_display = ['type', 'name', 'email', 'colored_status', 'createdAt']
     list_filter = ['type', 'status']
     search_fields = ['name', 'email']
     readonly_fields = ['id', 'type', 'expedition', 'name', 'email', 'message', 'createdAt']
@@ -260,6 +362,10 @@ class RequestAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+    @admin.display(description='Статус')
+    def colored_status(self, obj):
+        return _colored_status(obj)
 
     @admin.action(description='Переключить статус (NEW ↔ WAITLIST)')
     def toggle_status(self, request, queryset):
@@ -278,17 +384,44 @@ class RequestAdmin(admin.ModelAdmin):
 
 @admin.register(AppUser)
 class AppUserAdmin(admin.ModelAdmin):
-    list_display = ['name', 'email', 'role', 'blockedAt', 'createdAt', 'deletedAt']
-    list_filter = ['role']
+    list_display = ['name', 'email', 'colored_role', 'blocked_status', 'createdAt']
+    list_filter = ['role', 'blockedAt']
     search_fields = ['name', 'email']
     readonly_fields = ['id', 'email', 'passwordHash', 'name', 'createdAt', 'updatedAt', 'deletedAt']
     actions = ['block_users', 'unblock_users', 'change_role']
+
+    _ROLE_PALETTE = {
+        'USER':       ('#6c757d', '#fff'),
+        'ADMIN':      ('#0d6efd', '#fff'),
+        'SUPERADMIN': ('#ffc107', '#212529'),
+    }
 
     def has_add_permission(self, request):
         return False
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    @admin.display(description='Роль', ordering='role')
+    def colored_role(self, obj):
+        bg, fg = self._ROLE_PALETTE.get(obj.role, ('#6c757d', '#fff'))
+        return format_html(
+            '<span style="background:{};color:{};padding:2px 10px;'
+            'border-radius:4px;font-size:.85em;white-space:nowrap">{}</span>',
+            bg, fg, obj.get_role_display(),
+        )
+
+    @admin.display(description='Статус', ordering='blockedAt')
+    def blocked_status(self, obj):
+        if obj.blockedAt:
+            return format_html(
+                '<span style="background:#dc3545;color:#fff;padding:2px 10px;'
+                'border-radius:4px;font-size:.85em">Заблокирован</span>'
+            )
+        return format_html(
+            '<span style="background:#28a745;color:#fff;padding:2px 10px;'
+            'border-radius:4px;font-size:.85em">Активен</span>'
+        )
 
     def has_change_role_permission(self, request):
         return request.user.is_superuser
@@ -301,7 +434,16 @@ class AppUserAdmin(admin.ModelAdmin):
 
     @admin.action(description='Заблокировать')
     def block_users(self, request, queryset):
-        superadmin_in_selection = queryset.filter(role='SUPERADMIN').count()
+        to_block = queryset.filter(blockedAt__isnull=True)
+        count = to_block.count()
+        if count == 0:
+            self.message_user(
+                request,
+                'Все выбранные пользователи уже заблокированы.',
+                level=messages.INFO,
+            )
+            return
+        superadmin_in_selection = to_block.filter(role='SUPERADMIN').count()
         if superadmin_in_selection > 0:
             active = AppUser.objects.filter(
                 role='SUPERADMIN', deletedAt__isnull=True, blockedAt__isnull=True
@@ -313,18 +455,37 @@ class AppUserAdmin(admin.ModelAdmin):
                     level=messages.ERROR,
                 )
                 return
-        queryset.update(blockedAt=timezone.now())
-        emails = list(queryset.values_list('email', flat=True))
+        to_block.update(blockedAt=timezone.now())
+        emails = list(to_block.values_list('email', flat=True))
         User.objects.filter(username__in=emails).update(is_active=False)
+        self.message_user(
+            request,
+            f'Заблокировано пользователей: {count}.',
+            level=messages.SUCCESS,
+        )
 
     @admin.action(description='Разблокировать')
     def unblock_users(self, request, queryset):
-        queryset.update(blockedAt=None)
+        to_unblock = queryset.filter(blockedAt__isnull=False)
+        count = to_unblock.count()
+        if count == 0:
+            self.message_user(
+                request,
+                'Все выбранные пользователи уже активны.',
+                level=messages.INFO,
+            )
+            return
+        to_unblock.update(blockedAt=None)
         admin_emails = list(
-            queryset.filter(role__in=[Role.ADMIN, Role.SUPERADMIN])
+            to_unblock.filter(role__in=[Role.ADMIN, Role.SUPERADMIN])
             .values_list('email', flat=True)
         )
         User.objects.filter(username__in=admin_emails).update(is_active=True, is_staff=True)
+        self.message_user(
+            request,
+            f'Разблокировано пользователей: {count}.',
+            level=messages.SUCCESS,
+        )
 
     @admin.action(description='Изменить роль')
     def change_role(self, request, queryset):

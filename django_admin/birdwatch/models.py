@@ -10,29 +10,29 @@ class EventStatus(models.TextChoices):
 
 
 class Role(models.TextChoices):
-    USER = 'USER'
-    ADMIN = 'ADMIN'
-    SUPERADMIN = 'SUPERADMIN'
+    USER = 'USER', 'Пользователь'
+    ADMIN = 'ADMIN', 'Администратор'
+    SUPERADMIN = 'SUPERADMIN', 'Суперадминистратор'
 
 
 class RequestType(models.TextChoices):
-    PRIVATE_WALK = 'PRIVATE_WALK'
-    EXPEDITION = 'EXPEDITION'
+    PRIVATE_WALK = 'PRIVATE_WALK', 'Частная прогулка'
+    EXPEDITION = 'EXPEDITION', 'Экспедиция'
 
 
 class RequestStatus(models.TextChoices):
-    NEW = 'NEW'
-    WAITLIST = 'WAITLIST'
+    NEW = 'NEW', 'Новая'
+    WAITLIST = 'WAITLIST', 'Лист ожидания'
 
 
 class TeamMember(models.Model):
-    id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=50, db_column='name')
-    photoUrl = models.CharField(max_length=2048, db_column='photoUrl')
-    education = models.TextField(null=True, blank=True, db_column='education')
-    achievements = models.TextField(null=True, blank=True, db_column='achievements')
-    profileLinks = ArrayField(models.TextField(), db_column='profileLinks')
-    sortOrder = models.IntegerField(db_column='sortOrder')
+    id = models.AutoField(primary_key=True, verbose_name='ID')
+    name = models.CharField(max_length=50, db_column='name', verbose_name='Имя')
+    photoUrl = models.CharField(max_length=2048, db_column='photoUrl', verbose_name='Фото')
+    education = models.TextField(null=True, blank=True, db_column='education', verbose_name='Образование')
+    achievements = models.TextField(null=True, blank=True, db_column='achievements', verbose_name='Достижения')
+    profileLinks = ArrayField(models.TextField(), db_column='profileLinks', verbose_name='Ссылки на профили')
+    sortOrder = models.IntegerField(db_column='sortOrder', verbose_name='Порядок сортировки')
 
     class Meta:
         managed = False
@@ -45,20 +45,21 @@ class TeamMember(models.Model):
 
 
 class Walk(models.Model):
-    id = models.CharField(max_length=36, primary_key=True, db_column='id')
-    slug = models.CharField(max_length=200, unique=True, db_column='slug')
-    title = models.CharField(max_length=150, db_column='title')
-    description = models.TextField(db_column='description')
-    startsAt = models.DateTimeField(db_column='startsAt')
-    location = models.CharField(max_length=100, db_column='location')
-    priceKopecks = models.IntegerField(db_column='priceKopecks')
-    capacity = models.IntegerField(db_column='capacity')
-    guide = models.ForeignKey(TeamMember, on_delete=models.RESTRICT, db_column='guideId')
-    status = models.CharField(max_length=20, choices=EventStatus.choices, default=EventStatus.DRAFT, db_column='status')
-    coverPhotoUrl = models.CharField(max_length=2048, db_column='coverPhotoUrl')
-    publishedAt = models.DateTimeField(null=True, blank=True, db_column='publishedAt')
-    publishedBy = models.CharField(max_length=36, null=True, blank=True, db_column='publishedBy')
-    createdAt = models.DateTimeField(db_column='createdAt')
+    id = models.CharField(max_length=36, primary_key=True, db_column='id', verbose_name='ID')
+    slug = models.CharField(max_length=200, unique=True, db_column='slug', verbose_name='Адрес страницы')
+    title = models.CharField(max_length=150, db_column='title', verbose_name='Название')
+    description = models.TextField(db_column='description', verbose_name='Описание')
+    startsAt = models.DateTimeField(db_column='startsAt', verbose_name='Начало')
+    duration = models.CharField(max_length=100, null=True, blank=True, db_column='duration', verbose_name='Длительность')
+    location = models.CharField(max_length=100, db_column='location', verbose_name='Место проведения')
+    priceKopecks = models.IntegerField(db_column='priceKopecks', verbose_name='Цена (копейки)')
+    capacity = models.IntegerField(db_column='capacity', verbose_name='Вместимость')
+    guide = models.ForeignKey(TeamMember, on_delete=models.RESTRICT, db_column='guideId', verbose_name='Гид')
+    status = models.CharField(max_length=20, choices=EventStatus.choices, default=EventStatus.DRAFT, db_column='status', verbose_name='Статус')
+    coverPhotoUrl = models.CharField(max_length=2048, db_column='coverPhotoUrl', verbose_name='Фото обложки')
+    publishedAt = models.DateTimeField(null=True, blank=True, db_column='publishedAt', verbose_name='Опубликовано')
+    publishedBy = models.CharField(max_length=36, null=True, blank=True, db_column='publishedBy', verbose_name='Опубликовал')
+    createdAt = models.DateTimeField(db_column='createdAt', verbose_name='Создано')
 
     class Meta:
         managed = False
@@ -73,7 +74,8 @@ class Walk(models.Model):
 class ExpeditionToTeamMember(models.Model):
     # Through table for Expedition <-> TeamMember M2M (_ExpeditionToTeamMember)
     # B column is INTEGER because TeamMember.id is SERIAL, not UUID
-    A = models.ForeignKey('Expedition', on_delete=models.CASCADE, db_column='A', related_name='+')
+    # primary_key=True prevents Django from generating a nonexistent "id" column in queries
+    A = models.ForeignKey('Expedition', on_delete=models.CASCADE, db_column='A', related_name='+', primary_key=True)
     B = models.ForeignKey(TeamMember, on_delete=models.CASCADE, db_column='B', related_name='+')
 
     class Meta:
@@ -82,24 +84,26 @@ class ExpeditionToTeamMember(models.Model):
 
 
 class Expedition(models.Model):
-    id = models.CharField(max_length=36, primary_key=True, db_column='id')
-    slug = models.CharField(max_length=200, unique=True, db_column='slug')
-    title = models.CharField(max_length=150, db_column='title')
-    description = models.TextField(db_column='description')
-    startsAt = models.DateTimeField(db_column='startsAt')
-    location = models.CharField(max_length=100, db_column='location')
-    totalSpots = models.IntegerField(db_column='totalSpots')
-    spotsLeft = models.IntegerField(db_column='spotsLeft')
-    status = models.CharField(max_length=20, choices=EventStatus.choices, default=EventStatus.DRAFT, db_column='status')
-    coverPhotoUrl = models.CharField(max_length=2048, db_column='coverPhotoUrl')
-    publishedAt = models.DateTimeField(null=True, blank=True, db_column='publishedAt')
-    publishedBy = models.CharField(max_length=36, null=True, blank=True, db_column='publishedBy')
-    createdAt = models.DateTimeField(db_column='createdAt')
+    id = models.CharField(max_length=36, primary_key=True, db_column='id', verbose_name='ID')
+    slug = models.CharField(max_length=200, unique=True, db_column='slug', verbose_name='Адрес страницы: https://www.scipeople.net/{адрес}')
+    title = models.CharField(max_length=150, db_column='title', verbose_name='Название')
+    description = models.TextField(db_column='description', verbose_name='Описание')
+    startsAt = models.DateTimeField(db_column='startsAt', verbose_name='Начало')
+    endsAt = models.DateTimeField(null=True, blank=True, db_column='endsAt', verbose_name='Окончание')
+    location = models.CharField(max_length=100, db_column='location', verbose_name='Место проведения')
+    totalSpots = models.IntegerField(db_column='totalSpots', verbose_name='Всего мест')
+    spotsLeft = models.IntegerField(db_column='spotsLeft', verbose_name='Осталось мест')
+    status = models.CharField(max_length=20, choices=EventStatus.choices, default=EventStatus.DRAFT, db_column='status', verbose_name='Статус')
+    coverPhotoUrl = models.CharField(max_length=2048, db_column='coverPhotoUrl', verbose_name='Фото обложки')
+    publishedAt = models.DateTimeField(null=True, blank=True, db_column='publishedAt', verbose_name='Опубликовано')
+    publishedBy = models.CharField(max_length=36, null=True, blank=True, db_column='publishedBy', verbose_name='Опубликовал')
+    createdAt = models.DateTimeField(db_column='createdAt', verbose_name='Создано')
     guides = models.ManyToManyField(
         TeamMember,
         through=ExpeditionToTeamMember,
         through_fields=('A', 'B'),
         related_name='expeditions',
+        verbose_name='Гиды',
     )
 
     class Meta:
@@ -113,11 +117,11 @@ class Expedition(models.Model):
 
 
 class ExpeditionDay(models.Model):
-    id = models.CharField(max_length=36, primary_key=True, db_column='id')
-    expedition = models.ForeignKey(Expedition, on_delete=models.RESTRICT, db_column='expeditionId')
-    dayNumber = models.IntegerField(db_column='dayNumber')
-    title = models.CharField(max_length=150, db_column='title')
-    description = models.TextField(db_column='description')
+    id = models.CharField(max_length=36, primary_key=True, db_column='id', verbose_name='ID')
+    expedition = models.ForeignKey(Expedition, on_delete=models.RESTRICT, db_column='expeditionId', verbose_name='Экспедиция')
+    dayNumber = models.IntegerField(db_column='dayNumber', verbose_name='День')
+    title = models.CharField(max_length=150, db_column='title', verbose_name='Название')
+    description = models.TextField(db_column='description', verbose_name='Описание')
 
     class Meta:
         managed = False
@@ -125,15 +129,15 @@ class ExpeditionDay(models.Model):
 
 
 class AppUser(models.Model):
-    id = models.CharField(max_length=36, primary_key=True, db_column='id')
-    email = models.CharField(max_length=254, db_column='email')
-    passwordHash = models.CharField(max_length=255, db_column='passwordHash')
-    name = models.CharField(max_length=50, db_column='name')
-    role = models.CharField(max_length=20, choices=Role.choices, default=Role.USER, db_column='role')
-    createdAt = models.DateTimeField(db_column='createdAt')
-    updatedAt = models.DateTimeField(db_column='updatedAt')
-    deletedAt = models.DateTimeField(null=True, blank=True, db_column='deletedAt')
-    blockedAt = models.DateTimeField(null=True, blank=True, db_column='blockedAt')
+    id = models.CharField(max_length=36, primary_key=True, db_column='id', verbose_name='ID')
+    email = models.CharField(max_length=254, db_column='email', verbose_name='Email')
+    passwordHash = models.CharField(max_length=255, db_column='passwordHash', verbose_name='Хэш пароля')
+    name = models.CharField(max_length=50, db_column='name', verbose_name='Имя')
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.USER, db_column='role', verbose_name='Роль')
+    createdAt = models.DateTimeField(db_column='createdAt', verbose_name='Создан')
+    updatedAt = models.DateTimeField(db_column='updatedAt', verbose_name='Обновлён')
+    deletedAt = models.DateTimeField(null=True, blank=True, db_column='deletedAt', verbose_name='Удалён')
+    blockedAt = models.DateTimeField(null=True, blank=True, db_column='blockedAt', verbose_name='Заблокирован')
 
     class Meta:
         managed = False
@@ -146,16 +150,16 @@ class AppUser(models.Model):
 
 
 class Request(models.Model):
-    id = models.CharField(max_length=36, primary_key=True, db_column='id')
-    type = models.CharField(max_length=20, choices=RequestType.choices, db_column='type')
+    id = models.CharField(max_length=36, primary_key=True, db_column='id', verbose_name='ID')
+    type = models.CharField(max_length=20, choices=RequestType.choices, db_column='type', verbose_name='Тип')
     expedition = models.ForeignKey(
-        Expedition, on_delete=models.SET_NULL, null=True, blank=True, db_column='expeditionId'
+        Expedition, on_delete=models.SET_NULL, null=True, blank=True, db_column='expeditionId', verbose_name='Экспедиция'
     )
-    name = models.CharField(max_length=100, db_column='name')
-    email = models.CharField(max_length=254, db_column='email')
-    message = models.TextField(db_column='message')
-    status = models.CharField(max_length=20, choices=RequestStatus.choices, default=RequestStatus.NEW, db_column='status')
-    createdAt = models.DateTimeField(db_column='createdAt')
+    name = models.CharField(max_length=100, db_column='name', verbose_name='Имя')
+    email = models.CharField(max_length=254, db_column='email', verbose_name='Email')
+    message = models.TextField(db_column='message', verbose_name='Сообщение')
+    status = models.CharField(max_length=20, choices=RequestStatus.choices, default=RequestStatus.NEW, db_column='status', verbose_name='Статус')
+    createdAt = models.DateTimeField(db_column='createdAt', verbose_name='Создано')
 
     class Meta:
         managed = False
@@ -168,12 +172,12 @@ class Request(models.Model):
 
 
 class RoleChangeLog(models.Model):
-    id = models.CharField(max_length=36, primary_key=True, db_column='id')
-    targetUserId = models.CharField(max_length=36, db_column='targetUserId')
-    changedByUserId = models.CharField(max_length=36, db_column='changedByUserId')
-    fromRole = models.CharField(max_length=20, choices=Role.choices, db_column='fromRole')
-    toRole = models.CharField(max_length=20, choices=Role.choices, db_column='toRole')
-    createdAt = models.DateTimeField(db_column='createdAt')
+    id = models.CharField(max_length=36, primary_key=True, db_column='id', verbose_name='ID')
+    targetUserId = models.CharField(max_length=36, db_column='targetUserId', verbose_name='Пользователь')
+    changedByUserId = models.CharField(max_length=36, db_column='changedByUserId', verbose_name='Изменил')
+    fromRole = models.CharField(max_length=20, choices=Role.choices, db_column='fromRole', verbose_name='Предыдущая роль')
+    toRole = models.CharField(max_length=20, choices=Role.choices, db_column='toRole', verbose_name='Новая роль')
+    createdAt = models.DateTimeField(db_column='createdAt', verbose_name='Дата изменения')
 
     class Meta:
         managed = False

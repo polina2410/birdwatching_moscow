@@ -29,3 +29,19 @@
 .container-fluid h3 {
     font-weight: bold;
 }
+
+.delete-confirmation .btn-secondary,
+.delete-confirmation .btn-default,
+.delete-confirmation a.cancel-link {
+    background-color: #fff !important;
+    color: #212529 !important;
+    border-color: #ced4da !important;
+}
+
+.delete-confirmation .btn-secondary:hover,
+.delete-confirmation .btn-default:hover,
+.delete-confirmation a.cancel-link:hover {
+    background-color: #f8f9fa !important;
+    color: #212529 !important;
+    border-color: #adb5bd !important;
+}
