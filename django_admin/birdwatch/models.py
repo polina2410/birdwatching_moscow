@@ -21,8 +21,8 @@ class RequestType(models.TextChoices):
 
 
 class RequestStatus(models.TextChoices):
-    NEW = 'NEW'
-    WAITLIST = 'WAITLIST'
+    NEW = 'NEW', 'Новая'
+    WAITLIST = 'WAITLIST', 'Лист ожидания'
 
 
 class TeamMember(models.Model):

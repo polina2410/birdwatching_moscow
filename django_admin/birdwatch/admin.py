@@ -29,6 +29,8 @@ _STATUS_PALETTE = {
     'ACTIVE':    ('#28a745', '#fff'),
     'CANCELLED': ('#dc3545', '#fff'),
     'DELETED':   ('#343a40', '#fff'),
+    'NEW':       ('#0d6efd', '#fff'),
+    'WAITLIST':  ('#fd7e14', '#fff'),
 }
 
 
@@ -278,7 +280,7 @@ class ExpeditionAdmin(admin.ModelAdmin):
 
 @admin.register(Request)
 class RequestAdmin(admin.ModelAdmin):
-    list_display = ['type', 'name', 'email', 'status', 'createdAt']
+    list_display = ['type', 'name', 'email', 'colored_status', 'createdAt']
     list_filter = ['type', 'status']
     search_fields = ['name', 'email']
     readonly_fields = ['id', 'type', 'expedition', 'name', 'email', 'message', 'createdAt']
@@ -286,6 +288,10 @@ class RequestAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+    @admin.display(description='Статус')
+    def colored_status(self, obj):
+        return _colored_status(obj)
 
     @admin.action(description='Переключить статус (NEW ↔ WAITLIST)')
     def toggle_status(self, request, queryset):
