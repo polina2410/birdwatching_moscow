@@ -360,7 +360,16 @@ class AppUserAdmin(admin.ModelAdmin):
 
     @admin.action(description='Заблокировать')
     def block_users(self, request, queryset):
-        superadmin_in_selection = queryset.filter(role='SUPERADMIN').count()
+        to_block = queryset.filter(blockedAt__isnull=True)
+        count = to_block.count()
+        if count == 0:
+            self.message_user(
+                request,
+                'Все выбранные пользователи уже заблокированы.',
+                level=messages.INFO,
+            )
+            return
+        superadmin_in_selection = to_block.filter(role='SUPERADMIN').count()
         if superadmin_in_selection > 0:
             active = AppUser.objects.filter(
                 role='SUPERADMIN', deletedAt__isnull=True, blockedAt__isnull=True
@@ -372,9 +381,14 @@ class AppUserAdmin(admin.ModelAdmin):
                     level=messages.ERROR,
                 )
                 return
-        queryset.update(blockedAt=timezone.now())
-        emails = list(queryset.values_list('email', flat=True))
+        to_block.update(blockedAt=timezone.now())
+        emails = list(to_block.values_list('email', flat=True))
         User.objects.filter(username__in=emails).update(is_active=False)
+        self.message_user(
+            request,
+            f'Заблокировано пользователей: {count}.',
+            level=messages.SUCCESS,
+        )
 
     @admin.action(description='Разблокировать')
     def unblock_users(self, request, queryset):
