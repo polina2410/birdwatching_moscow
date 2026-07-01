@@ -218,8 +218,9 @@ class WalkForm(forms.ModelForm):
     slug = forms.SlugField(
         required=False,
         label='Адрес страницы',
-        help_text='Оставьте пустым — сформируется автоматически из названия',
+        help_text='Можно оставить пустым, тогда адрес сформируется автоматически из названия',
     )
+    duration = forms.CharField(label='Длительность', max_length=100)
     price_roubles = forms.IntegerField(label='Цена, ₽', min_value=0)
 
     class Meta:
@@ -297,9 +298,8 @@ class WalkAdmin(EventAdminMixin, DateTimeLocalMixin, admin.ModelAdmin):
 
 class ExpeditionForm(forms.ModelForm):
     slug = forms.SlugField(
-        required=False,
+        required=True,
         label='Адрес страницы',
-        help_text='Оставьте пустым — сформируется автоматически из названия',
     )
     endsAt = forms.DateTimeField(
         required=True,
@@ -359,13 +359,8 @@ class ExpeditionAdmin(EventAdminMixin, DateOnlyMixin, admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         if not change:
             obj.id = obj.id or str(uuid.uuid4())
-            if not obj.slug:
-                obj.slug = _unique_slug(Expedition, obj.title)
             obj.createdAt = timezone.now()
             obj.spotsLeft = obj.totalSpots
-        else:
-            if not obj.slug:
-                obj.slug = _unique_slug(Expedition, obj.title, exclude_pk=obj.pk)
         super().save_model(request, obj, form, change)
 
     def save_formset(self, request, form, formset, change):
