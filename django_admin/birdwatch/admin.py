@@ -2,6 +2,8 @@ import uuid
 
 from django import forms
 from django.contrib import admin, messages
+from django.contrib.admin.models import ADDITION, LogEntry
+from django.contrib.contenttypes.models import ContentType
 from django.utils.html import format_html
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import ArrayField
@@ -113,8 +115,26 @@ class DateOnlyMixin:
 # Shared helpers
 # ---------------------------------------------------------------------------
 
+_RU_TRANSLIT = [
+    ('ё', 'yo'), ('ж', 'zh'), ('х', 'kh'), ('ц', 'ts'), ('ч', 'ch'),
+    ('ш', 'sh'), ('щ', 'shch'), ('ю', 'yu'), ('я', 'ya'),
+    ('а', 'a'), ('б', 'b'), ('в', 'v'), ('г', 'g'), ('д', 'd'),
+    ('е', 'e'), ('з', 'z'), ('и', 'i'), ('й', 'y'), ('к', 'k'),
+    ('л', 'l'), ('м', 'm'), ('н', 'n'), ('о', 'o'), ('п', 'p'),
+    ('р', 'r'), ('с', 's'), ('т', 't'), ('у', 'u'), ('ф', 'f'),
+    ('ъ', ''), ('ы', 'y'), ('ь', ''), ('э', 'e'),
+]
+
+
+def _transliterate(text):
+    text = text.lower()
+    for ru, lat in _RU_TRANSLIT:
+        text = text.replace(ru, lat)
+    return text
+
+
 def _unique_slug(model_class, title, exclude_pk=None):
-    base = slugify(title, allow_unicode=False) or str(uuid.uuid4())[:8]
+    base = slugify(_transliterate(title)) or str(uuid.uuid4())[:8]
     slug = base
     n = 1
     while True:
@@ -177,7 +197,53 @@ class TeamMemberAdmin(admin.ModelAdmin):
 # Walk
 # ---------------------------------------------------------------------------
 
+class EventAdminMixin:
+    """Hide status on add form; restrict choices to DRAFT/ACTIVE on edit."""
+
+    def get_fields(self, request, obj=None):
+        fields = list(self.fields)
+        if obj is None:
+            fields = [f for f in fields if f != 'status']
+        return fields
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if obj is not None and 'status' in form.base_fields:
+            form.base_fields['status'].choices = [
+                c for c in EventStatus.choices
+                if c[0] in (EventStatus.DRAFT, EventStatus.ACTIVE)
+            ]
+        return form
+
+    @admin.display(description='Создал')
+    def created_by_email(self, obj):
+        if not obj.pk:
+            return '-'
+        ct = ContentType.objects.get_for_model(obj)
+        entry = LogEntry.objects.filter(
+            content_type=ct,
+            object_id=str(obj.pk),
+            action_flag=ADDITION,
+        ).order_by('action_time').first()
+        return entry.user.email if entry else '-'
+
+    @admin.display(description='Опубликовал')
+    def published_by_name(self, obj):
+        if not obj.publishedBy:
+            return '-'
+        try:
+            return AppUser.objects.get(pk=obj.publishedBy).email
+        except AppUser.DoesNotExist:
+            return obj.publishedBy
+
+
 class WalkForm(forms.ModelForm):
+    slug = forms.SlugField(
+        required=False,
+        label='Адрес страницы',
+        help_text='Можно оставить пустым, тогда адрес сформируется автоматически из названия',
+    )
+    duration = forms.CharField(label='Длительность', max_length=100)
     price_roubles = forms.IntegerField(label='Цена, ₽', min_value=0)
 
     class Meta:
@@ -198,18 +264,18 @@ class WalkForm(forms.ModelForm):
 
 
 @admin.register(Walk)
-class WalkAdmin(DateTimeLocalMixin, admin.ModelAdmin):
+class WalkAdmin(EventAdminMixin, DateTimeLocalMixin, admin.ModelAdmin):
     form = WalkForm
     list_display = ['title', 'startsAt', 'colored_status', 'location', 'price_roubles', 'capacity']
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
     ordering = ['-startsAt']
-    readonly_fields = ['id', 'createdAt', 'publishedAt', 'publishedBy']
+    readonly_fields = ['id', 'createdAt', 'created_by_email', 'publishedAt', 'published_by_name']
     fields = [
         'slug', 'title', 'description', 'startsAt', 'duration',
         'location', 'price_roubles', 'capacity', 'guide',
         'status', 'coverPhotoUrl',
-        'id', 'createdAt', 'publishedAt', 'publishedBy',
+        'id', 'createdAt', 'created_by_email', 'publishedAt', 'published_by_name',
     ]
     actions = ['publish_walks', 'cancel_walks', 'restore_walks']
 
@@ -230,6 +296,9 @@ class WalkAdmin(DateTimeLocalMixin, admin.ModelAdmin):
             obj.createdAt = timezone.now()
         elif not obj.slug:
             obj.slug = _unique_slug(Walk, obj.title, exclude_pk=obj.pk)
+        if obj.status == EventStatus.ACTIVE and not obj.publishedAt:
+            obj.publishedAt = timezone.now()
+            obj.publishedBy = _publisher_id(request)
         super().save_model(request, obj, form, change)
 
     @admin.action(description='Опубликовать')
@@ -254,6 +323,10 @@ class WalkAdmin(DateTimeLocalMixin, admin.ModelAdmin):
 # ---------------------------------------------------------------------------
 
 class ExpeditionForm(forms.ModelForm):
+    slug = forms.SlugField(
+        required=True,
+        label='Адрес страницы',
+    )
     endsAt = forms.DateTimeField(
         required=True,
         label='Окончание',
@@ -283,24 +356,25 @@ class ExpeditionForm(forms.ModelForm):
 
 class ExpeditionDayInline(admin.StackedInline):
     model = ExpeditionDay
-    extra = 1
+    verbose_name_plural = 'Расписание по дням'
+    extra = 0
     ordering = ['dayNumber']
     readonly_fields = ['id']
 
 
 @admin.register(Expedition)
-class ExpeditionAdmin(DateOnlyMixin, admin.ModelAdmin):
+class ExpeditionAdmin(EventAdminMixin, DateOnlyMixin, admin.ModelAdmin):
     form = ExpeditionForm
     list_display = ['title', 'startsAt', 'colored_status', 'totalSpots', 'spotsLeft', 'location']
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
     ordering = ['-startsAt']
-    readonly_fields = ['id', 'createdAt', 'publishedAt', 'publishedBy']
+    readonly_fields = ['id', 'createdAt', 'created_by_email', 'publishedAt', 'published_by_name']
     fields = [
         'slug', 'title', 'description', 'startsAt', 'endsAt',
         'location', 'totalSpots', 'spotsLeft',
         'status', 'coverPhotoUrl',
-        'id', 'createdAt', 'publishedAt', 'publishedBy',
+        'id', 'createdAt', 'created_by_email', 'publishedAt', 'published_by_name',
     ]
     inlines = [ExpeditionDayInline]
     actions = ['publish_expeditions', 'cancel_expeditions', 'restore_expeditions']
@@ -312,13 +386,11 @@ class ExpeditionAdmin(DateOnlyMixin, admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         if not change:
             obj.id = obj.id or str(uuid.uuid4())
-            if not obj.slug:
-                obj.slug = _unique_slug(Expedition, obj.title)
             obj.createdAt = timezone.now()
             obj.spotsLeft = obj.totalSpots
-        else:
-            if not obj.slug:
-                obj.slug = _unique_slug(Expedition, obj.title, exclude_pk=obj.pk)
+        if obj.status == EventStatus.ACTIVE and not obj.publishedAt:
+            obj.publishedAt = timezone.now()
+            obj.publishedBy = _publisher_id(request)
         super().save_model(request, obj, form, change)
 
     def save_formset(self, request, form, formset, change):
