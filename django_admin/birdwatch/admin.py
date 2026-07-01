@@ -78,18 +78,34 @@ admin.site.index_title = 'Панель администратора'
 # ---------------------------------------------------------------------------
 
 class DateTimeLocalInput(forms.DateTimeInput):
-    """Native browser datetime-local picker — supports year selection."""
+    """Native browser datetime-local picker (date + time)."""
     input_type = 'datetime-local'
 
 
+class DateInput(forms.DateInput):
+    """Native browser date-only picker."""
+    input_type = 'date'
+
+
 class DateTimeLocalMixin:
-    """Apply DateTimeLocalInput to every editable DateTimeField on the model."""
+    """Apply datetime-local picker to every editable DateTimeField."""
     def formfield_for_dbfield(self, db_field, request, **kwargs):
         if isinstance(db_field, models.DateTimeField):
             kwargs['widget'] = DateTimeLocalInput(format='%Y-%m-%dT%H:%M')
         field = super().formfield_for_dbfield(db_field, request, **kwargs)
         if field and isinstance(db_field, models.DateTimeField):
             field.input_formats = ['%Y-%m-%dT%H:%M']
+        return field
+
+
+class DateOnlyMixin:
+    """Apply date-only picker to every editable DateTimeField."""
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if isinstance(db_field, models.DateTimeField):
+            kwargs['widget'] = DateInput(format='%Y-%m-%d')
+        field = super().formfield_for_dbfield(db_field, request, **kwargs)
+        if field and isinstance(db_field, models.DateTimeField):
+            field.input_formats = ['%Y-%m-%d']
         return field
 
 
@@ -168,6 +184,12 @@ class WalkAdmin(DateTimeLocalMixin, admin.ModelAdmin):
     search_fields = ['title', 'slug', 'location']
     ordering = ['-startsAt']
     readonly_fields = ['id', 'createdAt', 'publishedAt', 'publishedBy']
+    fields = [
+        'slug', 'title', 'description', 'startsAt', 'duration',
+        'location', 'priceKopecks', 'capacity', 'guide',
+        'status', 'coverPhotoUrl',
+        'id', 'createdAt', 'publishedAt', 'publishedBy',
+    ]
     actions = ['publish_walks', 'cancel_walks', 'restore_walks']
 
     @admin.display(description='Статус')
@@ -238,13 +260,19 @@ class ExpeditionDayInline(admin.StackedInline):
 
 
 @admin.register(Expedition)
-class ExpeditionAdmin(DateTimeLocalMixin, admin.ModelAdmin):
+class ExpeditionAdmin(DateOnlyMixin, admin.ModelAdmin):
     form = ExpeditionForm
     list_display = ['title', 'startsAt', 'colored_status', 'totalSpots', 'spotsLeft', 'location']
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
     ordering = ['-startsAt']
     readonly_fields = ['id', 'createdAt', 'publishedAt', 'publishedBy', 'spotsLeft']
+    fields = [
+        'slug', 'title', 'description', 'startsAt', 'endsAt',
+        'location', 'totalSpots', 'spotsLeft',
+        'status', 'coverPhotoUrl',
+        'id', 'createdAt', 'publishedAt', 'publishedBy',
+    ]
     inlines = [ExpeditionDayInline]
     actions = ['publish_expeditions', 'cancel_expeditions', 'restore_expeditions']
 
