@@ -46,7 +46,7 @@ class TeamMember(models.Model):
 
 class Walk(models.Model):
     id = models.CharField(max_length=36, primary_key=True, db_column='id', verbose_name='ID')
-    slug = models.CharField(max_length=200, unique=True, db_column='slug', verbose_name='Слаг')
+    slug = models.CharField(max_length=200, unique=True, db_column='slug', verbose_name='Адрес страницы')
     title = models.CharField(max_length=150, db_column='title', verbose_name='Название')
     description = models.TextField(db_column='description', verbose_name='Описание')
     startsAt = models.DateTimeField(db_column='startsAt', verbose_name='Начало')
@@ -85,7 +85,7 @@ class ExpeditionToTeamMember(models.Model):
 
 class Expedition(models.Model):
     id = models.CharField(max_length=36, primary_key=True, db_column='id', verbose_name='ID')
-    slug = models.CharField(max_length=200, unique=True, db_column='slug', verbose_name='Слаг')
+    slug = models.CharField(max_length=200, unique=True, db_column='slug', verbose_name='Адрес страницы')
     title = models.CharField(max_length=150, db_column='title', verbose_name='Название')
     description = models.TextField(db_column='description', verbose_name='Описание')
     startsAt = models.DateTimeField(db_column='startsAt', verbose_name='Начало')
