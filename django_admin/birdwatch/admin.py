@@ -296,6 +296,9 @@ class WalkAdmin(EventAdminMixin, DateTimeLocalMixin, admin.ModelAdmin):
             obj.createdAt = timezone.now()
         elif not obj.slug:
             obj.slug = _unique_slug(Walk, obj.title, exclude_pk=obj.pk)
+        if obj.status == EventStatus.ACTIVE and not obj.publishedAt:
+            obj.publishedAt = timezone.now()
+            obj.publishedBy = _publisher_id(request)
         super().save_model(request, obj, form, change)
 
     @admin.action(description='Опубликовать')
@@ -385,6 +388,9 @@ class ExpeditionAdmin(EventAdminMixin, DateOnlyMixin, admin.ModelAdmin):
             obj.id = obj.id or str(uuid.uuid4())
             obj.createdAt = timezone.now()
             obj.spotsLeft = obj.totalSpots
+        if obj.status == EventStatus.ACTIVE and not obj.publishedAt:
+            obj.publishedAt = timezone.now()
+            obj.publishedBy = _publisher_id(request)
         super().save_model(request, obj, form, change)
 
     def save_formset(self, request, form, formset, change):
