@@ -378,12 +378,26 @@ class AppUserAdmin(admin.ModelAdmin):
 
     @admin.action(description='Разблокировать')
     def unblock_users(self, request, queryset):
-        queryset.update(blockedAt=None)
+        to_unblock = queryset.filter(blockedAt__isnull=False)
+        count = to_unblock.count()
+        if count == 0:
+            self.message_user(
+                request,
+                'Все выбранные пользователи уже активны.',
+                level=messages.INFO,
+            )
+            return
+        to_unblock.update(blockedAt=None)
         admin_emails = list(
-            queryset.filter(role__in=[Role.ADMIN, Role.SUPERADMIN])
+            to_unblock.filter(role__in=[Role.ADMIN, Role.SUPERADMIN])
             .values_list('email', flat=True)
         )
         User.objects.filter(username__in=admin_emails).update(is_active=True, is_staff=True)
+        self.message_user(
+            request,
+            f'Разблокировано пользователей: {count}.',
+            level=messages.SUCCESS,
+        )
 
     @admin.action(description='Изменить роль')
     def change_role(self, request, queryset):
