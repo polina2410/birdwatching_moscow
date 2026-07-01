@@ -113,8 +113,26 @@ class DateOnlyMixin:
 # Shared helpers
 # ---------------------------------------------------------------------------
 
+_RU_TRANSLIT = [
+    ('ё', 'yo'), ('ж', 'zh'), ('х', 'kh'), ('ц', 'ts'), ('ч', 'ch'),
+    ('ш', 'sh'), ('щ', 'shch'), ('ю', 'yu'), ('я', 'ya'),
+    ('а', 'a'), ('б', 'b'), ('в', 'v'), ('г', 'g'), ('д', 'd'),
+    ('е', 'e'), ('з', 'z'), ('и', 'i'), ('й', 'y'), ('к', 'k'),
+    ('л', 'l'), ('м', 'm'), ('н', 'n'), ('о', 'o'), ('п', 'p'),
+    ('р', 'r'), ('с', 's'), ('т', 't'), ('у', 'u'), ('ф', 'f'),
+    ('ъ', ''), ('ы', 'y'), ('ь', ''), ('э', 'e'),
+]
+
+
+def _transliterate(text):
+    text = text.lower()
+    for ru, lat in _RU_TRANSLIT:
+        text = text.replace(ru, lat)
+    return text
+
+
 def _unique_slug(model_class, title, exclude_pk=None):
-    base = slugify(title, allow_unicode=False) or str(uuid.uuid4())[:8]
+    base = slugify(_transliterate(title)) or str(uuid.uuid4())[:8]
     slug = base
     n = 1
     while True:
@@ -177,7 +195,31 @@ class TeamMemberAdmin(admin.ModelAdmin):
 # Walk
 # ---------------------------------------------------------------------------
 
+class EventAdminMixin:
+    """Hide status on add form; restrict choices to DRAFT/ACTIVE on edit."""
+
+    def get_fields(self, request, obj=None):
+        fields = list(self.fields)
+        if obj is None:
+            fields = [f for f in fields if f != 'status']
+        return fields
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if obj is not None and 'status' in form.base_fields:
+            form.base_fields['status'].choices = [
+                c for c in EventStatus.choices
+                if c[0] in (EventStatus.DRAFT, EventStatus.ACTIVE)
+            ]
+        return form
+
+
 class WalkForm(forms.ModelForm):
+    slug = forms.SlugField(
+        required=False,
+        label='Адрес страницы',
+        help_text='Оставьте пустым — сформируется автоматически из названия',
+    )
     price_roubles = forms.IntegerField(label='Цена, ₽', min_value=0)
 
     class Meta:
@@ -198,7 +240,7 @@ class WalkForm(forms.ModelForm):
 
 
 @admin.register(Walk)
-class WalkAdmin(DateTimeLocalMixin, admin.ModelAdmin):
+class WalkAdmin(EventAdminMixin, DateTimeLocalMixin, admin.ModelAdmin):
     form = WalkForm
     list_display = ['title', 'startsAt', 'colored_status', 'location', 'price_roubles', 'capacity']
     list_filter = ['status']
@@ -254,6 +296,11 @@ class WalkAdmin(DateTimeLocalMixin, admin.ModelAdmin):
 # ---------------------------------------------------------------------------
 
 class ExpeditionForm(forms.ModelForm):
+    slug = forms.SlugField(
+        required=False,
+        label='Адрес страницы',
+        help_text='Оставьте пустым — сформируется автоматически из названия',
+    )
     endsAt = forms.DateTimeField(
         required=True,
         label='Окончание',
@@ -289,7 +336,7 @@ class ExpeditionDayInline(admin.StackedInline):
 
 
 @admin.register(Expedition)
-class ExpeditionAdmin(DateOnlyMixin, admin.ModelAdmin):
+class ExpeditionAdmin(EventAdminMixin, DateOnlyMixin, admin.ModelAdmin):
     form = ExpeditionForm
     list_display = ['title', 'startsAt', 'colored_status', 'totalSpots', 'spotsLeft', 'location']
     list_filter = ['status']
