@@ -213,6 +213,15 @@ class EventAdminMixin:
             ]
         return form
 
+    @admin.display(description='Опубликовал')
+    def published_by_name(self, obj):
+        if not obj.publishedBy:
+            return '-'
+        try:
+            return AppUser.objects.get(pk=obj.publishedBy).name
+        except AppUser.DoesNotExist:
+            return obj.publishedBy
+
 
 class WalkForm(forms.ModelForm):
     slug = forms.SlugField(
@@ -247,12 +256,12 @@ class WalkAdmin(EventAdminMixin, DateTimeLocalMixin, admin.ModelAdmin):
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
     ordering = ['-startsAt']
-    readonly_fields = ['id', 'createdAt', 'publishedAt', 'publishedBy']
+    readonly_fields = ['id', 'createdAt', 'publishedAt', 'published_by_name']
     fields = [
         'slug', 'title', 'description', 'startsAt', 'duration',
         'location', 'price_roubles', 'capacity', 'guide',
         'status', 'coverPhotoUrl',
-        'id', 'createdAt', 'publishedAt', 'publishedBy',
+        'id', 'createdAt', 'publishedAt', 'published_by_name',
     ]
     actions = ['publish_walks', 'cancel_walks', 'restore_walks']
 
@@ -342,12 +351,12 @@ class ExpeditionAdmin(EventAdminMixin, DateOnlyMixin, admin.ModelAdmin):
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
     ordering = ['-startsAt']
-    readonly_fields = ['id', 'createdAt', 'publishedAt', 'publishedBy']
+    readonly_fields = ['id', 'createdAt', 'publishedAt', 'published_by_name']
     fields = [
         'slug', 'title', 'description', 'startsAt', 'endsAt',
         'location', 'totalSpots', 'spotsLeft',
         'status', 'coverPhotoUrl',
-        'id', 'createdAt', 'publishedAt', 'publishedBy',
+        'id', 'createdAt', 'publishedAt', 'published_by_name',
     ]
     inlines = [ExpeditionDayInline]
     actions = ['publish_expeditions', 'cancel_expeditions', 'restore_expeditions']
