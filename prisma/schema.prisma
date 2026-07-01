@@ -67,6 +67,7 @@ model Walk {
   title         String      @db.VarChar(150)
   description   String      @db.Text
   startsAt      DateTime
+  duration      String?     @db.VarChar(100)
   location      String      @db.VarChar(100)
   priceKopecks  Int
   capacity      Int
@@ -91,6 +92,7 @@ model Expedition {
   title         String      @db.VarChar(150)
   description   String      @db.Text
   startsAt      DateTime
+  endsAt        DateTime?
   location      String      @db.VarChar(100)
   totalSpots    Int
   spotsLeft     Int
