@@ -2,6 +2,7 @@ import uuid
 
 from django import forms
 from django.contrib import admin, messages
+from django.contrib.auth.models import User
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import PermissionDenied
 from django.db import models
@@ -16,10 +17,40 @@ from birdwatch.models import (
     ExpeditionDay,
     Request,
     RequestStatus,
+    Role,
     RoleChangeLog,
     TeamMember,
     Walk,
 )
+
+class BirdwatchAdminSite(admin.AdminSite):
+    """Admin site with flat URLs: /admin/<model>/ instead of /admin/birdwatch/<model>/."""
+
+    def get_urls(self):
+        from django.urls import include, path
+
+        standard = super().get_urls()
+
+        # Strip app-prefixed model patterns (e.g. 'birdwatch/walk/') from the
+        # standard list, then re-add them as flat paths ('walk/').
+        app_labels = {m._meta.app_label for m in self._registry}
+        non_model = [
+            p for p in standard
+            if not any(str(p.pattern).startswith(lbl) for lbl in app_labels)
+        ]
+
+        flat = [
+            path('%s/' % model._meta.model_name, include(ma.urls))
+            for model, ma in self._registry.items()
+        ]
+
+        return flat + non_model
+
+
+admin.site.__class__ = BirdwatchAdminSite
+admin.site.site_header = 'Birdwatching Moscow'
+admin.site.site_title = 'BM'
+admin.site.index_title = 'Панель администратора'
 
 
 # ---------------------------------------------------------------------------
@@ -135,6 +166,26 @@ class WalkAdmin(admin.ModelAdmin):
 # Expedition
 # ---------------------------------------------------------------------------
 
+class ExpeditionForm(forms.ModelForm):
+    class Meta:
+        model = Expedition
+        fields = '__all__'
+
+    def clean_totalSpots(self):
+        new_total = self.cleaned_data.get('totalSpots')
+        if self.instance and self.instance.pk:
+            try:
+                current = Expedition.objects.get(pk=self.instance.pk)
+                booked = current.totalSpots - current.spotsLeft
+                if new_total < booked:
+                    raise forms.ValidationError(
+                        f'Нельзя уменьшить вместимость: уже забронировано {booked} мест.'
+                    )
+            except Expedition.DoesNotExist:
+                pass
+        return new_total
+
+
 class ExpeditionDayInline(admin.StackedInline):
     model = ExpeditionDay
     extra = 1
@@ -144,6 +195,7 @@ class ExpeditionDayInline(admin.StackedInline):
 
 @admin.register(Expedition)
 class ExpeditionAdmin(admin.ModelAdmin):
+    form = ExpeditionForm
     list_display = ['title', 'startsAt', 'status', 'totalSpots', 'spotsLeft', 'location']
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
@@ -159,8 +211,12 @@ class ExpeditionAdmin(admin.ModelAdmin):
                 obj.slug = _unique_slug(Expedition, obj.title)
             obj.createdAt = timezone.now()
             obj.spotsLeft = obj.totalSpots
-        elif not obj.slug:
-            obj.slug = _unique_slug(Expedition, obj.title, exclude_pk=obj.pk)
+        else:
+            if not obj.slug:
+                obj.slug = _unique_slug(Expedition, obj.title, exclude_pk=obj.pk)
+            original = Expedition.objects.get(pk=obj.pk)
+            booked = original.totalSpots - original.spotsLeft
+            obj.spotsLeft = obj.totalSpots - booked
         super().save_model(request, obj, form, change)
 
     def save_formset(self, request, form, formset, change):
@@ -258,10 +314,17 @@ class AppUserAdmin(admin.ModelAdmin):
                 )
                 return
         queryset.update(blockedAt=timezone.now())
+        emails = list(queryset.values_list('email', flat=True))
+        User.objects.filter(username__in=emails).update(is_active=False)
 
     @admin.action(description='Разблокировать')
     def unblock_users(self, request, queryset):
         queryset.update(blockedAt=None)
+        admin_emails = list(
+            queryset.filter(role__in=[Role.ADMIN, Role.SUPERADMIN])
+            .values_list('email', flat=True)
+        )
+        User.objects.filter(username__in=admin_emails).update(is_active=True, is_staff=True)
 
     @admin.action(description='Изменить роль')
     def change_role(self, request, queryset):
@@ -282,8 +345,8 @@ class AppUserAdmin(admin.ModelAdmin):
             )
 
         new_role = request.POST.get('new_role')
-        if not new_role:
-            self.message_user(request, 'Не выбрана роль.', level=messages.ERROR)
+        if not new_role or new_role not in Role.values:
+            self.message_user(request, 'Недопустимая роль.', level=messages.ERROR)
             return
 
         try:
@@ -320,6 +383,11 @@ class AppUserAdmin(admin.ModelAdmin):
             from_role = target.role
             target.role = new_role
             target.save()
+
+            User.objects.filter(username=target.email).update(
+                is_superuser=(new_role == Role.SUPERADMIN),
+                is_staff=(new_role in (Role.ADMIN, Role.SUPERADMIN)),
+            )
 
             RoleChangeLog.objects.create(
                 id=str(uuid.uuid4()),
