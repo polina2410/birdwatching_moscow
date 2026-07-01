@@ -3,10 +3,10 @@ from django.db import models
 
 
 class EventStatus(models.TextChoices):
-    DRAFT = 'DRAFT'
-    ACTIVE = 'ACTIVE'
-    CANCELLED = 'CANCELLED'
-    DELETED = 'DELETED'
+    DRAFT = 'DRAFT', 'Черновик'
+    ACTIVE = 'ACTIVE', 'Активна'
+    CANCELLED = 'CANCELLED', 'Отменена'
+    DELETED = 'DELETED', 'Удалена'
 
 
 class Role(models.TextChoices):
@@ -37,7 +37,7 @@ class TeamMember(models.Model):
     class Meta:
         managed = False
         db_table = 'TeamMember'
-        verbose_name = 'Член команды'
+        verbose_name = 'члена команды'
         verbose_name_plural = 'Команда'
 
     def __str__(self):
@@ -63,7 +63,7 @@ class Walk(models.Model):
     class Meta:
         managed = False
         db_table = 'Walk'
-        verbose_name = 'Прогулка'
+        verbose_name = 'прогулку'
         verbose_name_plural = 'Прогулки'
 
     def __str__(self):
@@ -105,7 +105,7 @@ class Expedition(models.Model):
     class Meta:
         managed = False
         db_table = 'Expedition'
-        verbose_name = 'Экспедиция'
+        verbose_name = 'экспедицию'
         verbose_name_plural = 'Экспедиции'
 
     def __str__(self):
@@ -138,7 +138,7 @@ class AppUser(models.Model):
     class Meta:
         managed = False
         db_table = 'User'
-        verbose_name = 'Пользователь'
+        verbose_name = 'пользователя'
         verbose_name_plural = 'Пользователи'
 
     def __str__(self):
@@ -160,7 +160,7 @@ class Request(models.Model):
     class Meta:
         managed = False
         db_table = 'Request'
-        verbose_name = 'Заявка'
+        verbose_name = 'заявку'
         verbose_name_plural = 'Заявки'
 
     def __str__(self):

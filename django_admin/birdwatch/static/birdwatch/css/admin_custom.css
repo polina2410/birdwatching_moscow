@@ -1,19 +1,31 @@
-.main-sidebar {
-    width: 320px;
+:root {
+    --lte-sidebar-width: 320px;
 }
 
-.content-wrapper,
-.main-footer,
-.main-header {
-    margin-left: 320px;
+.info {
+    color: white;
 }
 
-.sidebar-collapse .main-sidebar {
-    width: 4.6rem;
+.nav-header {
+    display: none;
 }
 
-.sidebar-collapse .content-wrapper,
-.sidebar-collapse .main-footer,
-.sidebar-collapse .main-header {
-    margin-left: 4.6rem;
+.breadcrumb li:has(a[href="/admin/birdwatch/"]) {
+    display: none;
+}
+
+.card-header {
+    display: none;
+}
+
+.btn-group {
+    gap: 6px;
+}
+
+.btn-group .btn {
+    border-radius: 6px !important;
+}
+
+.container-fluid h3 {
+    font-weight: bold;
 }

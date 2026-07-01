@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { safeRedirect } from '@/utils/safeRedirect';
 
 export async function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
@@ -36,12 +37,15 @@ export async function proxy(request: NextRequest) {
     if (isProtectedAccount && !token) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
-      url.searchParams.set('callbackUrl', pathname);
+      url.searchParams.set('returnUrl', pathname);
       return NextResponse.redirect(url);
     }
 
     if (isAuthPage && token) {
-      return NextResponse.redirect(new URL('/account/profile', request.nextUrl));
+      const returnUrl =
+        request.nextUrl.searchParams.get('returnUrl') ??
+        request.nextUrl.searchParams.get('callbackUrl');
+      return NextResponse.redirect(new URL(safeRedirect(returnUrl), request.url));
     }
   }
 
