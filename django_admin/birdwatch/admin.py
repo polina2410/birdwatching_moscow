@@ -2,6 +2,7 @@ import uuid
 
 from django import forms
 from django.contrib import admin, messages
+from django.utils.html import format_html
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import PermissionDenied
@@ -22,6 +23,23 @@ from birdwatch.models import (
     TeamMember,
     Walk,
 )
+
+_STATUS_PALETTE = {
+    'DRAFT':     ('#6c757d', '#fff'),
+    'ACTIVE':    ('#28a745', '#fff'),
+    'CANCELLED': ('#dc3545', '#fff'),
+    'DELETED':   ('#343a40', '#fff'),
+}
+
+
+def _colored_status(obj):
+    bg, fg = _STATUS_PALETTE.get(obj.status, ('#6c757d', '#fff'))
+    return format_html(
+        '<span style="background:{};color:{};padding:2px 10px;'
+        'border-radius:4px;font-size:.85em;white-space:nowrap">{}</span>',
+        bg, fg, obj.get_status_display(),
+    )
+
 
 class BirdwatchAdminSite(admin.AdminSite):
     """Admin site with flat URLs: /admin/<model>/ instead of /admin/birdwatch/<model>/."""
@@ -123,12 +141,16 @@ class TeamMemberAdmin(admin.ModelAdmin):
 
 @admin.register(Walk)
 class WalkAdmin(admin.ModelAdmin):
-    list_display = ['title', 'startsAt', 'status', 'location', 'price_roubles', 'capacity']
+    list_display = ['title', 'startsAt', 'colored_status', 'location', 'price_roubles', 'capacity']
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
     ordering = ['-startsAt']
     readonly_fields = ['id', 'createdAt', 'publishedAt', 'publishedBy']
     actions = ['publish_walks', 'cancel_walks', 'restore_walks']
+
+    @admin.display(description='Статус')
+    def colored_status(self, obj):
+        return _colored_status(obj)
 
     def price_roubles(self, obj):
         return f'{obj.priceKopecks // 100} ₽'
@@ -196,13 +218,17 @@ class ExpeditionDayInline(admin.StackedInline):
 @admin.register(Expedition)
 class ExpeditionAdmin(admin.ModelAdmin):
     form = ExpeditionForm
-    list_display = ['title', 'startsAt', 'status', 'totalSpots', 'spotsLeft', 'location']
+    list_display = ['title', 'startsAt', 'colored_status', 'totalSpots', 'spotsLeft', 'location']
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
     ordering = ['-startsAt']
     readonly_fields = ['id', 'createdAt', 'publishedAt', 'publishedBy', 'spotsLeft']
     inlines = [ExpeditionDayInline]
     actions = ['publish_expeditions', 'cancel_expeditions', 'restore_expeditions']
+
+    @admin.display(description='Статус')
+    def colored_status(self, obj):
+        return _colored_status(obj)
 
     def save_model(self, request, obj, form, change):
         if not change:
