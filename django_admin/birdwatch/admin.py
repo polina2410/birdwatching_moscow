@@ -310,17 +310,44 @@ class RequestAdmin(admin.ModelAdmin):
 
 @admin.register(AppUser)
 class AppUserAdmin(admin.ModelAdmin):
-    list_display = ['name', 'email', 'role', 'blockedAt', 'createdAt', 'deletedAt']
-    list_filter = ['role']
+    list_display = ['name', 'email', 'colored_role', 'blocked_status', 'createdAt']
+    list_filter = ['role', 'blockedAt']
     search_fields = ['name', 'email']
     readonly_fields = ['id', 'email', 'passwordHash', 'name', 'createdAt', 'updatedAt', 'deletedAt']
     actions = ['block_users', 'unblock_users', 'change_role']
+
+    _ROLE_PALETTE = {
+        'USER':       ('#6c757d', '#fff'),
+        'ADMIN':      ('#0d6efd', '#fff'),
+        'SUPERADMIN': ('#ffc107', '#212529'),
+    }
 
     def has_add_permission(self, request):
         return False
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    @admin.display(description='Роль', ordering='role')
+    def colored_role(self, obj):
+        bg, fg = self._ROLE_PALETTE.get(obj.role, ('#6c757d', '#fff'))
+        return format_html(
+            '<span style="background:{};color:{};padding:2px 10px;'
+            'border-radius:4px;font-size:.85em;white-space:nowrap">{}</span>',
+            bg, fg, obj.get_role_display(),
+        )
+
+    @admin.display(description='Статус', ordering='blockedAt')
+    def blocked_status(self, obj):
+        if obj.blockedAt:
+            return format_html(
+                '<span style="background:#dc3545;color:#fff;padding:2px 10px;'
+                'border-radius:4px;font-size:.85em">Заблокирован</span>'
+            )
+        return format_html(
+            '<span style="background:#28a745;color:#fff;padding:2px 10px;'
+            'border-radius:4px;font-size:.85em">Активен</span>'
+        )
 
     def has_change_role_permission(self, request):
         return request.user.is_superuser

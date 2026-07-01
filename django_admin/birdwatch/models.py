@@ -10,9 +10,9 @@ class EventStatus(models.TextChoices):
 
 
 class Role(models.TextChoices):
-    USER = 'USER'
-    ADMIN = 'ADMIN'
-    SUPERADMIN = 'SUPERADMIN'
+    USER = 'USER', 'Пользователь'
+    ADMIN = 'ADMIN', 'Администратор'
+    SUPERADMIN = 'SUPERADMIN', 'Суперадминистратор'
 
 
 class RequestType(models.TextChoices):
