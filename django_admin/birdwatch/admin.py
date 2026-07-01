@@ -2,6 +2,8 @@ import uuid
 
 from django import forms
 from django.contrib import admin, messages
+from django.contrib.admin.models import ADDITION, LogEntry
+from django.contrib.contenttypes.models import ContentType
 from django.utils.html import format_html
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import ArrayField
@@ -213,12 +215,24 @@ class EventAdminMixin:
             ]
         return form
 
+    @admin.display(description='Создал')
+    def created_by_email(self, obj):
+        if not obj.pk:
+            return '-'
+        ct = ContentType.objects.get_for_model(obj)
+        entry = LogEntry.objects.filter(
+            content_type=ct,
+            object_id=str(obj.pk),
+            action_flag=ADDITION,
+        ).order_by('action_time').first()
+        return entry.user.email if entry else '-'
+
     @admin.display(description='Опубликовал')
     def published_by_name(self, obj):
         if not obj.publishedBy:
             return '-'
         try:
-            return AppUser.objects.get(pk=obj.publishedBy).name
+            return AppUser.objects.get(pk=obj.publishedBy).email
         except AppUser.DoesNotExist:
             return obj.publishedBy
 
@@ -256,12 +270,12 @@ class WalkAdmin(EventAdminMixin, DateTimeLocalMixin, admin.ModelAdmin):
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
     ordering = ['-startsAt']
-    readonly_fields = ['id', 'createdAt', 'publishedAt', 'published_by_name']
+    readonly_fields = ['id', 'createdAt', 'created_by_email', 'publishedAt', 'published_by_name']
     fields = [
         'slug', 'title', 'description', 'startsAt', 'duration',
         'location', 'price_roubles', 'capacity', 'guide',
         'status', 'coverPhotoUrl',
-        'id', 'createdAt', 'publishedAt', 'published_by_name',
+        'id', 'createdAt', 'created_by_email', 'publishedAt', 'published_by_name',
     ]
     actions = ['publish_walks', 'cancel_walks', 'restore_walks']
 
@@ -352,12 +366,12 @@ class ExpeditionAdmin(EventAdminMixin, DateOnlyMixin, admin.ModelAdmin):
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
     ordering = ['-startsAt']
-    readonly_fields = ['id', 'createdAt', 'publishedAt', 'published_by_name']
+    readonly_fields = ['id', 'createdAt', 'created_by_email', 'publishedAt', 'published_by_name']
     fields = [
         'slug', 'title', 'description', 'startsAt', 'endsAt',
         'location', 'totalSpots', 'spotsLeft',
         'status', 'coverPhotoUrl',
-        'id', 'createdAt', 'publishedAt', 'published_by_name',
+        'id', 'createdAt', 'created_by_email', 'publishedAt', 'published_by_name',
     ]
     inlines = [ExpeditionDayInline]
     actions = ['publish_expeditions', 'cancel_expeditions', 'restore_expeditions']
