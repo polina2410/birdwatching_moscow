@@ -267,6 +267,10 @@ class ExpeditionForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        starts_at = cleaned_data.get('startsAt')
+        ends_at = cleaned_data.get('endsAt')
+        if starts_at and ends_at and starts_at >= ends_at:
+            self.add_error('endsAt', 'Дата окончания должна быть позже даты начала.')
         spots_left = cleaned_data.get('spotsLeft')
         total_spots = cleaned_data.get('totalSpots')
         if spots_left is not None and total_spots is not None:
