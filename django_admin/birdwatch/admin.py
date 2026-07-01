@@ -339,6 +339,7 @@ class ExpeditionForm(forms.ModelForm):
 
 class ExpeditionDayInline(admin.StackedInline):
     model = ExpeditionDay
+    verbose_name_plural = 'Расписание по дням'
     extra = 1
     ordering = ['dayNumber']
     readonly_fields = ['id']
