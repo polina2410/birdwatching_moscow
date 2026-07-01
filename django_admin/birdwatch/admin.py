@@ -254,23 +254,27 @@ class WalkAdmin(DateTimeLocalMixin, admin.ModelAdmin):
 # ---------------------------------------------------------------------------
 
 class ExpeditionForm(forms.ModelForm):
+    endsAt = forms.DateTimeField(
+        required=True,
+        label='Окончание',
+        widget=DateInput(format='%Y-%m-%d'),
+        input_formats=['%Y-%m-%d'],
+    )
+
     class Meta:
         model = Expedition
         fields = '__all__'
 
-    def clean_totalSpots(self):
-        new_total = self.cleaned_data.get('totalSpots')
-        if self.instance and self.instance.pk:
-            try:
-                current = Expedition.objects.get(pk=self.instance.pk)
-                booked = current.totalSpots - current.spotsLeft
-                if new_total < booked:
-                    raise forms.ValidationError(
-                        f'Нельзя уменьшить вместимость: уже забронировано {booked} мест.'
-                    )
-            except Expedition.DoesNotExist:
-                pass
-        return new_total
+    def clean(self):
+        cleaned_data = super().clean()
+        spots_left = cleaned_data.get('spotsLeft')
+        total_spots = cleaned_data.get('totalSpots')
+        if spots_left is not None and total_spots is not None:
+            if spots_left < 0:
+                self.add_error('spotsLeft', 'Значение не может быть отрицательным.')
+            elif spots_left > total_spots:
+                self.add_error('spotsLeft', 'Не может превышать общее количество мест.')
+        return cleaned_data
 
 
 class ExpeditionDayInline(admin.StackedInline):
@@ -287,7 +291,7 @@ class ExpeditionAdmin(DateOnlyMixin, admin.ModelAdmin):
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
     ordering = ['-startsAt']
-    readonly_fields = ['id', 'createdAt', 'publishedAt', 'publishedBy', 'spotsLeft']
+    readonly_fields = ['id', 'createdAt', 'publishedAt', 'publishedBy']
     fields = [
         'slug', 'title', 'description', 'startsAt', 'endsAt',
         'location', 'totalSpots', 'spotsLeft',
@@ -311,9 +315,6 @@ class ExpeditionAdmin(DateOnlyMixin, admin.ModelAdmin):
         else:
             if not obj.slug:
                 obj.slug = _unique_slug(Expedition, obj.title, exclude_pk=obj.pk)
-            original = Expedition.objects.get(pk=obj.pk)
-            booked = original.totalSpots - original.spotsLeft
-            obj.spotsLeft = obj.totalSpots - booked
         super().save_model(request, obj, form, change)
 
     def save_formset(self, request, form, formset, change):
