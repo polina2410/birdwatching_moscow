@@ -177,8 +177,29 @@ class TeamMemberAdmin(admin.ModelAdmin):
 # Walk
 # ---------------------------------------------------------------------------
 
+class WalkForm(forms.ModelForm):
+    price_roubles = forms.IntegerField(label='Цена, ₽', min_value=0)
+
+    class Meta:
+        model = Walk
+        exclude = ['priceKopecks']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields['price_roubles'].initial = self.instance.priceKopecks // 100
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.priceKopecks = self.cleaned_data['price_roubles'] * 100
+        if commit:
+            instance.save()
+        return instance
+
+
 @admin.register(Walk)
 class WalkAdmin(DateTimeLocalMixin, admin.ModelAdmin):
+    form = WalkForm
     list_display = ['title', 'startsAt', 'colored_status', 'location', 'price_roubles', 'capacity']
     list_filter = ['status']
     search_fields = ['title', 'slug', 'location']
@@ -186,7 +207,7 @@ class WalkAdmin(DateTimeLocalMixin, admin.ModelAdmin):
     readonly_fields = ['id', 'createdAt', 'publishedAt', 'publishedBy']
     fields = [
         'slug', 'title', 'description', 'startsAt', 'duration',
-        'location', 'priceKopecks', 'capacity', 'guide',
+        'location', 'price_roubles', 'capacity', 'guide',
         'status', 'coverPhotoUrl',
         'id', 'createdAt', 'publishedAt', 'publishedBy',
     ]
