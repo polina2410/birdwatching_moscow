@@ -4,30 +4,45 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { confirmResetSchema } from '@/lib/validation/auth'
 import { BCRYPT_COST } from '@/lib/constants'
+import { validateRequest } from '@/lib/api/validate'
 
 const INVALID_LINK = { error: 'Invalid or expired link' }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null)
-  const parsed = confirmResetSchema.safeParse(body)
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Validation failed', issues: parsed.error.flatten().fieldErrors },
-      { status: 400 }
-    )
+  const result = await validateRequest(req, confirmResetSchema)
+
+  if (!result.success) {
+    return result.response
   }
 
-  const { token: rawToken, newPassword } = parsed.data
-  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex')
+  const { token: rawToken, newPassword } = result.data
 
-  const resetToken = await prisma.passwordResetToken.findUnique({ where: { tokenHash } })
+  const tokenHash = crypto
+    .createHash('sha256')
+    .update(rawToken)
+    .digest('hex')
+
+  const resetToken = await prisma.passwordResetToken.findUnique({
+    where: { tokenHash },
+  })
+
   const now = new Date()
 
-  if (!resetToken || resetToken.usedAt !== null || resetToken.expiresAt <= now) {
+  if (
+    !resetToken ||
+    resetToken.usedAt !== null ||
+    resetToken.expiresAt <= now
+  ) {
     return NextResponse.json(INVALID_LINK, { status: 400 })
   }
 
-  const user = await prisma.user.findFirst({ where: { id: resetToken.userId, deletedAt: null } })
+  const user = await prisma.user.findFirst({
+    where: {
+      id: resetToken.userId,
+      deletedAt: null,
+    },
+  })
+
   if (!user) {
     return NextResponse.json(INVALID_LINK, { status: 400 })
   }
@@ -35,8 +50,14 @@ export async function POST(req: NextRequest) {
   const passwordHash = await bcrypt.hash(newPassword, BCRYPT_COST)
 
   await prisma.$transaction([
-    prisma.user.update({ where: { id: user.id }, data: { passwordHash } }),
-    prisma.passwordResetToken.update({ where: { id: resetToken.id }, data: { usedAt: now } }),
+    prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    }),
+    prisma.passwordResetToken.update({
+      where: { id: resetToken.id },
+      data: { usedAt: now },
+    }),
   ])
 
   return NextResponse.json({ ok: true })
