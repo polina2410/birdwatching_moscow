@@ -2,59 +2,62 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { useAuthForm } from '@/hooks/useAuthForm'
+import { AUTH_ERRORS } from '@/lib/auth-errors'
+import { AUTH_LABELS } from '@/lib/auth-labels'
+
+const L = AUTH_LABELS.resetRequest
+const C = AUTH_LABELS.common
 
 export default function RequestResetPage() {
   const [submitted, setSubmitted] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const { error, setError, loading, run } = useAuthForm()
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    setError(null)
-    setLoading(true)
     const form = new FormData(e.currentTarget)
 
-    const res = await fetch('/api/auth/request-password-reset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: form.get('email') }),
+    await run(async () => {
+      const res = await fetch('/api/auth/request-password-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.get('email') }),
+      })
+
+      if (res.ok) {
+        setSubmitted(true)
+        return
+      }
+
+      setError(AUTH_ERRORS.generic)
     })
-
-    setLoading(false)
-
-    if (res.ok) {
-      setSubmitted(true)
-      return
-    }
-
-    setError('Something went wrong. Please try again.')
   }
 
   if (submitted) {
     return (
       <main>
-        <h1>Check your email</h1>
-        <p>If this email is registered, a reset link has been sent.</p>
-        <Link href="/login">Back to log in</Link>
+        <h1>{L.successTitle}</h1>
+        <p>{L.successText}</p>
+        <Link href="/login">{C.backToLogin}</Link>
       </main>
     )
   }
 
   return (
     <main>
-      <h1>Reset password</h1>
-      <p>Enter your email address and we will send you a reset link.</p>
+      <h1>{L.title}</h1>
+      <p>{L.description}</p>
       {error && <p role="alert">{error}</p>}
       <form onSubmit={handleSubmit}>
         <div>
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email">{C.emailField}</label>
           <input id="email" name="email" type="email" required autoComplete="email" />
         </div>
         <button type="submit" disabled={loading}>
-          {loading ? 'Sending…' : 'Send reset link'}
+          {loading ? L.submitting : L.submit}
         </button>
       </form>
-      <Link href="/login">Back to log in</Link>
+      <Link href="/login">{C.backToLogin}</Link>
     </main>
   )
 }
