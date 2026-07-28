@@ -1,11 +1,13 @@
 ## Getting Started
 
+Start the Next.js dev server:
+
 ```bash
-npm run dev
-# or
-yarn dev
-# or
 pnpm dev
-# or
-bun dev
+```
+
+Start the Django admin (runs at http://localhost:8000):
+
+```bash
+python manage.py runserver
 ```
