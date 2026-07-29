@@ -10,8 +10,8 @@ const L = AUTH_LABELS.resetRequest
 const C = AUTH_LABELS.common
 
 export default function RequestResetPage() {
-  const [submitted, setSubmitted] = useState(false)
   const { error, setError, loading, run } = useAuthForm()
+  const [success, setSuccess] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -25,7 +25,7 @@ export default function RequestResetPage() {
       })
 
       if (res.ok) {
-        setSubmitted(true)
+        setSuccess(true)
         return
       }
 
@@ -33,7 +33,7 @@ export default function RequestResetPage() {
     })
   }
 
-  if (submitted) {
+  if (success) {
     return (
       <main>
         <h1>{L.successTitle}</h1>

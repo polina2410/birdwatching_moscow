@@ -20,6 +20,9 @@ function LoginForm() {
   )
   const { error, setError, loading, run } = useAuthForm()
 
+  const isRegistered = searchParams.get('registered') === '1'
+  const isPasswordReset = searchParams.get('passwordReset') === '1'
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const form = new FormData(e.currentTarget)
@@ -44,8 +47,9 @@ function LoginForm() {
   return (
     <main>
       <h1>{L.title}</h1>
-      {searchParams.get('registered') && <p>{L.registered}</p>}
-      {searchParams.get('passwordReset') && <p>{L.passwordReset}</p>}
+      {isRegistered && <p>{L.registered}</p>}
+      {isPasswordReset && <p>{L.passwordReset}</p>}
+
       {error && <p role="alert">{error}</p>}
       <form onSubmit={handleSubmit}>
         <div>

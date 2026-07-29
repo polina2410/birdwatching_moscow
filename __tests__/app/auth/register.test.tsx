@@ -23,70 +23,127 @@ beforeEach(() => {
 })
 
 describe('RegisterPage — rendering', () => {
-  it('renders all fields and submit button', () => {
+  it('renders all form fields, submit button, and login link', () => {
     render(<RegisterPage />)
-    expect(screen.getByLabelText(L.nameField)).toBeDefined()
-    expect(screen.getByLabelText(C.emailField)).toBeDefined()
-    expect(screen.getByLabelText(C.passwordField)).toBeDefined()
-    expect(screen.getByRole('button', { name: L.submit })).toBeDefined()
-  })
+    expect(screen.getByLabelText(L.nameField)).toBeInTheDocument()
+    expect(screen.getByLabelText(C.emailField)).toBeInTheDocument()
+    expect(screen.getByLabelText(C.passwordField)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: L.submit })).toBeInTheDocument()
 
-  it('renders a link to the login page', () => {
-    render(<RegisterPage />)
-    expect(screen.getByRole('link', { name: L.loginLink })).toBeDefined()
+    expect(screen.getByRole('link', { name: L.loginLink })).toHaveAttribute('href', '/login')
   })
 })
 
 describe('RegisterPage — success', () => {
-  it('redirects to /login?registered=1 on successful registration', async () => {
+  it('sends typed data to endpoint and redirects to /login?registered=1', async () => {
     (fetch as Mock).mockResolvedValue({ ok: true })
     render(<RegisterPage />)
-    fillForm()
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/login?registered=1'))
+
+    fillForm({ name: 'Мария', email: 'maria@test.com', password: 'securePassword123' })
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: 'maria@test.com',
+          password: 'securePassword123',
+          name: 'Мария',
+        }),
+      })
+      expect(pushMock).toHaveBeenCalledWith('/login?registered=1')
+    })
   })
 })
 
-describe('RegisterPage — errors', () => {
-  it('shows email-taken error on 409', async () => {
+describe('RegisterPage — errors & validation', () => {
+  it('shows email-taken error on 409 status', async () => {
     (fetch as Mock).mockResolvedValue({ ok: false, status: 409, json: async () => ({}) })
     render(<RegisterPage />)
     fillForm()
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(AUTH_ERRORS.emailTaken))
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(AUTH_ERRORS.emailTaken)
+    )
   })
 
-  it('shows field errors from validation issues', async () => {
+  it('renders specific field errors from validation response', async () => {
     (fetch as Mock).mockResolvedValue({
       ok: false,
       status: 400,
-      json: async () => ({ issues: { email: ['Неверный формат email'] } }),
+      text: async () => JSON.stringify({
+        issues: {
+          name: ['Имя слишком короткое'],
+          email: ['Неверный формат email'],
+          password: ['Пароль слишком простой'],
+        },
+      }),
     })
     render(<RegisterPage />)
     fillForm()
-    await waitFor(() => expect(screen.getByText('Неверный формат email')).toBeDefined())
+
+    await waitFor(() => {
+      expect(screen.getByText('Имя слишком короткое')).toBeInTheDocument()
+      expect(screen.getByText('Неверный формат email')).toBeInTheDocument()
+      expect(screen.getByText('Пароль слишком простой')).toBeInTheDocument()
+    })
   })
 
-  it('shows generic error on unexpected server error', async () => {
+  it('clears previous field errors on new submit attempt', async () => {
+    (fetch as Mock)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        text: async () => JSON.stringify({ issues: { email: ['Неверный формат email'] } }),
+      })
+      .mockResolvedValueOnce({ ok: true })
+
+    render(<RegisterPage />)
+    fillForm()
+
+    await waitFor(() =>
+      expect(screen.getByText('Неверный формат email')).toBeInTheDocument()
+    )
+
+    fillForm()
+
+    await waitFor(() => {
+      expect(screen.queryByText('Неверный формат email')).not.toBeInTheDocument()
+    })
+  })
+
+  it('shows generic error on 500 server error', async () => {
     (fetch as Mock).mockResolvedValue({ ok: false, status: 500, json: async () => ({}) })
     render(<RegisterPage />)
     fillForm()
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(AUTH_ERRORS.generic))
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(AUTH_ERRORS.generic)
+    )
   })
 
-  it('shows network error when fetch throws', async () => {
+  it('shows network error when fetch rejects', async () => {
     (fetch as Mock).mockRejectedValue(new Error('Network failure'))
     render(<RegisterPage />)
     fillForm()
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(AUTH_ERRORS.network))
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(AUTH_ERRORS.network)
+    )
   })
 })
 
 describe('RegisterPage — loading state', () => {
   it('disables the submit button while submitting', async () => {
     let resolve!: (v: unknown) => void
-    ;(fetch as Mock).mockReturnValue(new Promise(r => { resolve = r }))
+    ;(fetch as Mock).mockReturnValue(new Promise((r) => { resolve = r }))
+
     render(<RegisterPage />)
     fillForm()
-    expect(screen.getByRole('button', { name: L.submitting })).toBeDisabled()
+
+    const button = screen.getByRole('button')
+    expect(button).toBeDisabled()
+    expect(button).toHaveTextContent(L.submitting)
+
+    // Clean up pending promise
     resolve({ ok: true })
+    await waitFor(() => expect(pushMock).toHaveBeenCalled())
   })
 })

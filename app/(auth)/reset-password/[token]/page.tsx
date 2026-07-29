@@ -1,11 +1,22 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuthForm } from '@/hooks/useAuthForm'
 import { AUTH_ERRORS } from '@/lib/auth-errors'
 import { AUTH_LABELS } from '@/lib/auth-labels'
 
 const L = AUTH_LABELS.resetConfirm
+const C = AUTH_LABELS.common
+
+async function safeJsonParse<T = unknown>(res: Response): Promise<T | null> {
+  try {
+    const text = await res.text()
+    return text ? (JSON.parse(text) as T) : null
+  } catch {
+    return null
+  }
+}
 
 export default function ConfirmResetPage() {
   const router = useRouter()
@@ -22,7 +33,7 @@ export default function ConfirmResetPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token: params.token,
-          newPassword: form.get('newPassword'),
+          password: form.get('password'),
         }),
       })
 
@@ -31,8 +42,13 @@ export default function ConfirmResetPage() {
         return
       }
 
-      const data = await res.json()
-      setError(data.error ?? AUTH_ERRORS.generic)
+      const data = await safeJsonParse<{ error?: string }>(res)
+
+      if (data?.error) {
+        setError(data.error)
+      } else {
+        setError(AUTH_ERRORS.generic)
+      }
     })
   }
 
@@ -40,22 +56,26 @@ export default function ConfirmResetPage() {
     <main>
       <h1>{L.title}</h1>
       {error && <p role="alert">{error}</p>}
+
       <form onSubmit={handleSubmit}>
         <div>
-          <label htmlFor="newPassword">{L.newPasswordField}</label>
+          <label htmlFor="password">{L.newPasswordField}</label>
           <input
-            id="newPassword"
-            name="newPassword"
+            id="password"
+            name="password"
             type="password"
             required
             autoComplete="new-password"
             minLength={8}
           />
         </div>
+
         <button type="submit" disabled={loading}>
           {loading ? L.submitting : L.submit}
         </button>
       </form>
+
+      <Link href="/login">{C.backToLogin}</Link>
     </main>
   )
 }

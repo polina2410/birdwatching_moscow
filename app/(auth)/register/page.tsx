@@ -10,6 +10,15 @@ import { AUTH_LABELS } from '@/lib/auth-labels'
 const L = AUTH_LABELS.register
 const C = AUTH_LABELS.common
 
+async function safeJsonParse<T = unknown>(res: Response): Promise<T | null> {
+  try {
+    const text = await res.text()
+    return text ? (JSON.parse(text) as T) : null
+  } catch {
+    return null
+  }
+}
+
 export default function RegisterPage() {
   const router = useRouter()
   const { error, setError, loading, run } = useAuthForm()
@@ -36,10 +45,11 @@ export default function RegisterPage() {
         return
       }
 
-      const data = await res.json()
+      const data = await safeJsonParse<{ issues?: Record<string, string[]> }>(res)
+
       if (res.status === 409) {
         setError(AUTH_ERRORS.emailTaken)
-      } else if (data.issues) {
+      } else if (data?.issues) {
         setFieldErrors(data.issues)
       } else {
         setError(AUTH_ERRORS.generic)

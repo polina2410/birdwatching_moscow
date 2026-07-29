@@ -7,7 +7,7 @@ import { AUTH_LABELS } from '@/lib/auth-labels'
 const pushMock = vi.fn()
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
-  useParams: () => ({ token: 'valid-token' }),
+  useParams: () => ({ token: 'valid-reset-token-123' }),
 }))
 
 const L = AUTH_LABELS.resetConfirm
@@ -25,27 +25,52 @@ beforeEach(() => {
 describe('ConfirmResetPage — rendering', () => {
   it('renders new password field and submit button', () => {
     render(<ConfirmResetPage />)
-    expect(screen.getByLabelText(L.newPasswordField)).toBeDefined()
-    expect(screen.getByRole('button', { name: L.submit })).toBeDefined()
+    expect(screen.getByLabelText(L.newPasswordField)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: L.submit })).toBeInTheDocument()
   })
 })
 
 describe('ConfirmResetPage — success', () => {
-  it('redirects to /login?passwordReset=1 on success', async () => {
+  it('sends token and new password to API and redirects to /login?passwordReset=1', async () => {
     (fetch as Mock).mockResolvedValue({ ok: true })
     render(<ConfirmResetPage />)
-    fillAndSubmit()
-    await waitFor(() =>
+
+    fillAndSubmit('mySecretPassword99')
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: 'valid-reset-token-123',
+          password: 'mySecretPassword99',
+        }),
+      })
       expect(pushMock).toHaveBeenCalledWith('/login?passwordReset=1')
-    )
+    })
   })
 })
 
-describe('ConfirmResetPage — errors', () => {
+describe('ConfirmResetPage — errors & loading', () => {
+  it('disables submit button during submission', async () => {
+    let resolvePromise!: (v: unknown) => void
+    ;(fetch as Mock).mockReturnValue(new Promise((r) => { resolvePromise = r }))
+
+    render(<ConfirmResetPage />)
+    fillAndSubmit()
+
+    const button = screen.getByRole('button')
+    expect(button).toBeDisabled()
+    expect(button).toHaveTextContent(L.submitting)
+
+    resolvePromise({ ok: true })
+    await waitFor(() => expect(pushMock).toHaveBeenCalled())
+  })
+
   it('shows error message from API response', async () => {
     (fetch as Mock).mockResolvedValue({
       ok: false,
-      json: async () => ({ error: 'Ссылка устарела или недействительна.' }),
+      text: async () => JSON.stringify({ error: 'Ссылка устарела или недействительна.' }),
     })
     render(<ConfirmResetPage />)
     fillAndSubmit()
@@ -54,8 +79,8 @@ describe('ConfirmResetPage — errors', () => {
     )
   })
 
-  it('falls back to generic error when API returns no error message', async () => {
-    (fetch as Mock).mockResolvedValue({ ok: false, json: async () => ({}) })
+  it('falls back to generic error when API returns no error message or non-JSON', async () => {
+    (fetch as Mock).mockResolvedValue({ ok: false, text: async () => '' })
     render(<ConfirmResetPage />)
     fillAndSubmit()
     await waitFor(() =>

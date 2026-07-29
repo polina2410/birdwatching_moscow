@@ -4,8 +4,6 @@ import RequestResetPage from '@/app/(auth)/reset-password/page'
 import { AUTH_ERRORS } from '@/lib/auth-errors'
 import { AUTH_LABELS } from '@/lib/auth-labels'
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
-
 const L = AUTH_LABELS.resetRequest
 const C = AUTH_LABELS.common
 
@@ -19,24 +17,53 @@ beforeEach(() => {
 })
 
 describe('RequestResetPage — rendering', () => {
-  it('renders email field and submit button', () => {
+  it('renders title, description, email field, submit button, and back link', () => {
     render(<RequestResetPage />)
-    expect(screen.getByLabelText(C.emailField)).toBeDefined()
-    expect(screen.getByRole('button', { name: L.submit })).toBeDefined()
+    expect(screen.getByRole('heading', { level: 1, name: L.title })).toBeInTheDocument()
+    expect(screen.getByText(L.description)).toBeInTheDocument()
+    expect(screen.getByLabelText(C.emailField)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: L.submit })).toBeInTheDocument()
+
+    expect(screen.getByRole('link', { name: C.backToLogin })).toHaveAttribute('href', '/login')
   })
 })
 
 describe('RequestResetPage — success', () => {
-  it('shows success state after successful submission', async () => {
+  it('sends email payload to endpoint and shows success state', async () => {
     (fetch as Mock).mockResolvedValue({ ok: true })
     render(<RequestResetPage />)
-    fillAndSubmit()
-    await waitFor(() => expect(screen.getByText(L.successText)).toBeDefined())
-    expect(screen.getByRole('link', { name: C.backToLogin })).toBeDefined()
+
+    fillAndSubmit('user@example.com')
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('/api/auth/request-password-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'user@example.com' }),
+      })
+      expect(screen.getByRole('heading', { level: 1, name: L.successTitle })).toBeInTheDocument()
+      expect(screen.getByText(L.successText)).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: C.backToLogin })).toHaveAttribute('href', '/login')
+    })
   })
 })
 
-describe('RequestResetPage — errors', () => {
+describe('RequestResetPage — errors & loading', () => {
+  it('disables submit button and shows submitting state while loading', async () => {
+    let resolvePromise!: (v: unknown) => void
+    ;(fetch as Mock).mockReturnValue(new Promise((r) => { resolvePromise = r }))
+
+    render(<RequestResetPage />)
+    fillAndSubmit()
+
+    const button = screen.getByRole('button')
+    expect(button).toBeDisabled()
+    expect(button).toHaveTextContent(L.submitting)
+
+    resolvePromise({ ok: true })
+    await waitFor(() => expect(screen.getByText(L.successText)).toBeInTheDocument())
+  })
+
   it('shows generic error on server failure', async () => {
     (fetch as Mock).mockResolvedValue({ ok: false, status: 500 })
     render(<RequestResetPage />)
