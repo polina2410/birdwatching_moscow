@@ -1,4 +1,4 @@
-type MailKind = 'welcome' | 'password-reset'
+type MailKind = 'welcome' | 'password-reset' | 'order-paid'
 
 export async function sendMail(args: {
   to: string
