@@ -15,10 +15,10 @@ function useTestHarness(isActive: boolean, onBlock: (proceed: () => void) => voi
 }
 
 describe('useNavigationGuard', () => {
-  let onBlock: ReturnType<typeof vi.fn>
+  let onBlock: ReturnType<typeof vi.fn<(proceed: () => void) => void>>
 
   beforeEach(() => {
-    onBlock = vi.fn()
+    onBlock = vi.fn<(proceed: () => void) => void>()
   })
 
   it('throws when used outside NavigationGuardProvider', () => {
@@ -45,13 +45,13 @@ describe('useNavigationGuard', () => {
 
   it('invokes onBlock with proceed when the registered guard is called', () => {
     const { result } = renderHook(() => useTestHarness(true, onBlock), { wrapper })
-    const proceed = vi.fn()
+    const proceed = vi.fn<() => void>()
     result.current.guardRef.current?.(proceed)
     expect(onBlock).toHaveBeenCalledWith(proceed)
   })
 
   it('uses the latest onBlock when it changes between renders', () => {
-    const onBlock2 = vi.fn()
+    const onBlock2 = vi.fn<(proceed: () => void) => void>()
     let block = onBlock
 
     const { result, rerender } = renderHook(() => useTestHarness(true, block), { wrapper })
@@ -59,7 +59,7 @@ describe('useNavigationGuard', () => {
     block = onBlock2
     rerender()
 
-    const proceed = vi.fn()
+    const proceed = vi.fn<() => void>()
     result.current.guardRef.current?.(proceed)
 
     expect(onBlock).not.toHaveBeenCalled()

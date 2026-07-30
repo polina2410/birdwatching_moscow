@@ -3,10 +3,10 @@ import { renderHook } from '@testing-library/react'
 import { useClickOutside } from '@/hooks/useClickOutside'
 
 describe('useClickOutside', () => {
-  let onClose: ReturnType<typeof vi.fn>
+  let onClose: ReturnType<typeof vi.fn<() => void>>
 
   beforeEach(() => {
-    onClose = vi.fn()
+    onClose = vi.fn<() => void>()
   })
 
   afterEach(() => {

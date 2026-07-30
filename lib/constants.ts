@@ -16,3 +16,12 @@ export const PASSWORD_MIN_LENGTH = 8
 export const BCRYPT_COST = 12
 // NOTE: 1 hour TTL for password reset tokens
 export const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000
+
+// NOTE: matches the cart's existing 20-minute hold; the clock restarts at checkout
+export const PAYMENT_HOLD_MINUTES = 20
+
+// ЮKassa: `description` and receipt `items[].description` are both capped at 128 chars [verify limit]
+export const YOOKASSA_DESCRIPTION_MAX_LENGTH = 128
+
+// Return-page reconciliation poll cadence
+export const ORDER_STATUS_POLL_INTERVAL_MS = 2000
