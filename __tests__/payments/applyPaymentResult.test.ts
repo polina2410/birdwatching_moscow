@@ -28,7 +28,7 @@ vi.mock('@/lib/mail', () => ({ sendMail: sendMailMock }))
 
 import { applyPaymentResult } from '@/lib/payments/applyPaymentResult'
 
-const tx = (prismaMock as { _tx: ReturnType<typeof vi.fn> })._tx as {
+const tx = ((prismaMock as unknown as { _tx: unknown })._tx) as {
   order: { findUnique: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> }
   ticket: { createMany: ReturnType<typeof vi.fn>; count: ReturnType<typeof vi.fn> }
   orderItem: { findMany: ReturnType<typeof vi.fn> }

@@ -4,14 +4,14 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   _req: Request,
-  context: { params: Promise<{ id: string }> }
+  context: { params: { id: string } | Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { id } = await context.params
+  const { id } = await Promise.resolve(context.params)
   const order = await prisma.order.findUnique({ where: { id } })
 
   if (!order || order.userId !== session.user.id) {

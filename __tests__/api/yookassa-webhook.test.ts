@@ -27,7 +27,7 @@ function makeNotification(overrides: Record<string, unknown> = {}) {
       status: 'succeeded',
       amount: { value: '1500.00', currency: 'RUB' },
       metadata: { orderId: 'order-1' },
-      ...overrides.object,
+      ...(overrides.object as Record<string, unknown> | undefined),
     },
     ...overrides,
   }
