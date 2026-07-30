@@ -179,3 +179,24 @@ Made Django admin production-ready on the Selectel VPS. Settings now read `DEBUG
 ### Summary
 
 Expanded Django admin to replace the previously removed Next.js admin panel. `WalkAdmin` and `ExpeditionAdmin` both override `save_model` to auto-generate UUID primary keys, slugs (from title via `slugify` with uniqueness retry), and `createdAt` timestamps on creation. `ExpeditionAdmin` also initialises `spotsLeft = totalSpots` on create and manages `ExpeditionDay` rows via `ExpeditionDayInline` (UUID-generated in `save_formset`). Both models get publish/cancel/restore bulk actions that update `status`, `publishedAt`, and `publishedBy`. `TeamMemberAdmin` uses a custom `TeamMemberForm` that exposes `profileLinks` as a newline-separated textarea, converting to/from the PostgreSQL array on save. `RequestAdmin` gains a `toggle_status` action (NEW ↔ WAITLIST) while keeping add/delete disabled. 24 `SimpleTestCase` tests, no live DB required.
+
+---
+
+## YooKassa Payment Integration
+
+**Branch:** yookassa-payment
+**Completed:** 2026-07-30
+
+### Goals
+
+- `POST /api/checkout` — authenticated, rate-limited; creates `Order` + `OrderItem` rows in one locked transaction; calls ЮKassa Smart Payment and returns `{ orderId, confirmationUrl }`
+- `POST /api/payments/yookassa/webhook` — IP-allowlist check, Zod parse, dispatches to `applyPaymentResult`
+- `lib/payments/applyPaymentResult.ts` — idempotent state machine for `succeeded`/`canceled`/`pending`; creates tickets and sends mail on success
+- `GET /api/orders/[id]` — owner-only status polling endpoint
+- `YOOKASSA_MODE=stub` runs the full state machine with zero outbound HTTP; switching to live is env-only
+- 54-ФЗ receipt support via `lib/payments/receipt.ts`; all money as integer kopecks, never floats
+- `OrderItem`, `Order.expiresAt`, `Order.paidAt`, `Order.paymentIssue` schema additions
+
+### Summary
+
+Implemented the full YooKassa Smart Payment flow. Checkout transaction uses authoritative server-side pricing (no client-supplied amounts), holds seats for 20 minutes via `expiresAt`, and clears cart atomically. `applyPaymentResult` is the single reconciliation point for both webhooks and return-page polling — idempotent on duplicate delivery. `YOOKASSA_MODE=stub` (default) requires no API key: a dev confirmation page at `/dev/yookassa/[paymentId]` fires real-shaped webhook notifications to exercise the full state machine locally. Hand-wrote and registered the migration via `prisma migrate resolve --applied` due to pre-existing DB drift.
