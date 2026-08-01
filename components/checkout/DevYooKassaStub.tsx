@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/buttons/Button';
 import { CHECKOUT_LABELS } from '@/lib/checkout-labels';
+import type { YooKassaNotificationEvent } from '@/lib/payments/yookassa/types';
 import styles from './DevYooKassaStub.module.css';
 
 const L = CHECKOUT_LABELS.devStub;
@@ -12,17 +13,15 @@ type DevYooKassaStubProps = {
   paymentId: string;
 };
 
-type NotificationEvent = 'payment.succeeded' | 'payment.canceled';
-
 export const DevYooKassaStub = ({ paymentId }: DevYooKassaStubProps) => {
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId') ?? '';
   const amount = searchParams.get('amount') ?? '0.00';
 
-  const [pending, setPending] = useState<NotificationEvent | null>(null);
+  const [pending, setPending] = useState<YooKassaNotificationEvent | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function sendNotification(event: NotificationEvent) {
+  async function sendNotification(event: YooKassaNotificationEvent) {
     setPending(event);
     setMessage(null);
     try {

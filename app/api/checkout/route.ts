@@ -7,6 +7,7 @@ import { buildReceipt, truncateDescription } from '@/lib/payments/receipt'
 import { env } from '@/lib/env'
 import { PAYMENT_HOLD_MINUTES } from '@/lib/constants'
 import type { Prisma } from '@/generated/prisma/client'
+import type { CheckoutErrorCode, WalkSnapshot, CreatedOrder, OrderLineItem } from '@/types/checkout'
 
 const MS_PER_MINUTE = 60 * 1000
 
@@ -18,8 +19,6 @@ async function getPrisma() {
   return (await import('@/lib/prisma')).prisma
 }
 
-type CheckoutErrorCode = 'CART_EMPTY' | 'CART_EXPIRED' | 'CAPACITY_EXCEEDED'
-
 class CheckoutError extends Error {
   constructor(
     public readonly code: CheckoutErrorCode,
@@ -27,25 +26,6 @@ class CheckoutError extends Error {
   ) {
     super(code)
   }
-}
-
-interface WalkSnapshot {
-  id: string
-  title: string
-  priceKopecks: number
-  capacity: number
-}
-
-interface CreatedOrder {
-  id: string
-  totalKopecks: number
-}
-
-interface OrderLineItem {
-  walkId: string
-  title: string
-  quantity: number
-  unitPriceKopecks: number
 }
 
 async function createPendingOrder(

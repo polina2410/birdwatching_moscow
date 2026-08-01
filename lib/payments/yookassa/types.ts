@@ -1,5 +1,15 @@
 export type YooKassaPaymentStatus = 'pending' | 'waiting_for_capture' | 'succeeded' | 'canceled'
 
+export type ProviderPaymentStatus = Exclude<YooKassaPaymentStatus, 'waiting_for_capture'>
+
+export type YooKassaNotificationEvent = 'payment.succeeded' | 'payment.canceled'
+
+export interface YooKassaPaymentResponse {
+  id: string
+  status: YooKassaPaymentStatus
+  confirmation?: { confirmation_url?: string }
+}
+
 export interface ReceiptItemInput {
   description: string
   quantity: number
