@@ -18,6 +18,9 @@ const { sendMailMock, prismaMock } = vi.hoisted(() => {
     sendMailMock: vi.fn(),
     prismaMock: {
       $transaction: vi.fn().mockImplementation(async (cb: (tx: typeof txMock) => unknown) => cb(txMock)),
+      user: {
+        findUnique: vi.fn(),
+      },
       _tx: txMock,
     },
   }
@@ -57,6 +60,7 @@ beforeEach(() => {
   tx.ticket.count.mockResolvedValue(0)
   tx.orderItem.findMany.mockResolvedValue(baseItems)
   sendMailMock.mockResolvedValue(undefined)
+  prismaMock.user.findUnique.mockResolvedValue({ email: 'buyer@example.com' })
 })
 
 describe('applyPaymentResult — succeeded', () => {
@@ -89,9 +93,30 @@ describe('applyPaymentResult — succeeded', () => {
     expect(call.data).toHaveLength(2)
   })
 
-  it('sends confirmation mail', async () => {
+  it('sends confirmation mail to the buyer email, not the userId', async () => {
     await applyPaymentResult({ paymentId: 'pay-abc', status: 'succeeded', amountKopecks: 150000 })
-    expect(sendMailMock).toHaveBeenCalledWith(expect.objectContaining({ kind: 'order-paid' }))
+
+    expect(prismaMock.user.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'user-1' } })
+    )
+    expect(sendMailMock).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'order-paid', to: 'buyer@example.com', data: { orderId: 'order-1' } })
+    )
+    expect(sendMailMock).not.toHaveBeenCalledWith(expect.objectContaining({ to: 'user-1' }))
+  })
+
+  it('logs and does not throw when the buyer user record is not found', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(null)
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    await expect(
+      applyPaymentResult({ paymentId: 'pay-abc', status: 'succeeded', amountKopecks: 150000 })
+    ).resolves.not.toThrow()
+
+    expect(sendMailMock).not.toHaveBeenCalled()
+    expect(consoleErrorSpy).toHaveBeenCalled()
+
+    consoleErrorSpy.mockRestore()
   })
 
   it('is a no-op when order is already PAID (idempotent)', async () => {
