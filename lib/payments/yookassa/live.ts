@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { env } from '@/lib/env'
 import { kopecksToString } from '@/lib/payments/money'
-import type { PaymentInput, PaymentResult, YooKassaClient } from './types'
+import type { PaymentInput, PaymentResult, YooKassaClient, YooKassaPaymentResponse } from './types'
 
 const YOOKASSA_TIMEOUT_MS = 10_000
 const RETRYABLE_STATUS_THRESHOLD = 500
@@ -51,12 +51,6 @@ function buildPayload(input: PaymentInput) {
         }
       : {}),
   }
-}
-
-interface YooKassaPaymentResponse {
-  id: string
-  status: PaymentResult['status']
-  confirmation?: { confirmation_url?: string }
 }
 
 function toPaymentResult(data: YooKassaPaymentResponse): PaymentResult {

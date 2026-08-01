@@ -2,8 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { ORDER_STATUS_POLL_INTERVAL_MS } from '@/lib/constants';
+import type { OrderStatus } from '@/generated/prisma/client';
 
-export type OrderStatus = 'PENDING' | 'AWAITING_PAYMENT' | 'PAID' | 'FAILED' | 'EXPIRED';
+export type { OrderStatus };
+
+interface OrderStatusResponse {
+  status: OrderStatus;
+}
 
 const TERMINAL_STATUSES: readonly OrderStatus[] = ['PAID', 'FAILED', 'EXPIRED'];
 
@@ -29,7 +34,7 @@ export function useOrderStatus(orderId: string | null): UseOrderStatusResult {
         const res = await fetch(`/api/orders/${orderId}`);
         if (!res.ok) throw new Error('order status request failed');
 
-        const data = (await res.json()) as { status: OrderStatus };
+        const data = (await res.json()) as OrderStatusResponse;
         if (cancelled) return;
 
         setStatus(data.status);

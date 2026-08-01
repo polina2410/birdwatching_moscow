@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { sendMail } from '@/lib/mail'
-import type { Prisma } from '@/generated/prisma/client'
+import type { Prisma, OrderStatus } from '@/generated/prisma/client'
+import type { ProviderPaymentStatus } from '@/lib/payments/yookassa/types'
 
-export type ProviderPaymentStatus = 'succeeded' | 'canceled' | 'pending'
+export type { ProviderPaymentStatus }
 
 export interface ApplyPaymentResultInput {
   paymentId: string
@@ -14,7 +15,7 @@ export interface ApplyPaymentResultInput {
 interface OrderRecord {
   id: string
   userId: string
-  status: string
+  status: OrderStatus
   totalKopecks: number
 }
 
