@@ -1,0 +1,159 @@
+# Spec: Yandex Cloud Postbox integration
+
+**Goal:** Replace the `lib/mail.ts` console-log stub with a working SMTP implementation backed by Yandex Cloud Postbox, add HTML email templates for all three mail kinds, and fix the known `order-paid` addressing bug.
+
+> Yandex Cloud Postbox docs: https://yandex.cloud/en/docs/postbox/
+> SMTP send guide: https://yandex.cloud/en/docs/postbox/operations/send-email
+
+---
+
+## Context
+
+- `lib/mail.ts` is intentionally a stub — its comment reads _"real SMTP will replace this console.log without changing callers."_ The public signature `sendMail({ to, kind, data })` must stay unchanged.
+- Three mail kinds are already defined and called from live routes: `welcome`, `password-reset`, `order-paid`.
+- **Known bug in `lib/payments/applyPaymentResult.ts` line 101:** `to: order.userId` passes a UUID string, not an email address. This must be fixed as part of this spec.
+- No email library exists in the project yet (`nodemailer`, `resend`, etc. are absent from `package.json`).
+- The app is deployed on a Selectel VPS in Russia. Yandex Cloud Postbox is geographically accessible, Russia-compliant (54-ФЗ), and integrates with Yandex Cloud Logging already used by the infrastructure.
+
+---
+
+## What to build
+
+### 1. Install nodemailer
+
+```bash
+pnpm add nodemailer
+pnpm add -D @types/nodemailer
+```
+
+Nodemailer is chosen over the SES-compatible HTTP API because it adds no new HTTP client, is well-understood in the Node.js ecosystem, and the SMTP gateway (`postbox.cloud.yandex.net:587`, STARTTLS) is stable.
+
+---
+
+### 2. Environment variables
+
+Add to `.env.example` (never commit real values):
+
+```
+# Yandex Cloud Postbox — SMTP
+POSTBOX_SMTP_USER=          # API key ID (from yc iam api-key create --scope yc.postbox.send)
+POSTBOX_SMTP_PASSWORD=      # API key secret
+POSTBOX_FROM_ADDRESS=       # verified sender address, e.g. no-reply@yourdomain.ru
+POSTBOX_FROM_NAME=Птицы Москвы
+```
+
+Fixed constants (not env vars — they are determined by the provider):
+
+| Constant | Value |
+|---|---|
+| SMTP host | `postbox.cloud.yandex.net` |
+| SMTP port | `587` (STARTTLS) |
+| TLS versions | 1.2 / 1.3 |
+
+---
+
+### 3. `lib/mail.ts` — replace stub with real implementation
+
+The file must export the same public types and the same `sendMail` function signature. No caller changes.
+
+**Transporter:** created once at module load using `nodemailer.createTransport`. The transporter is not exported — only `sendMail` is.
+
+**Subjects** (Russian, one per kind):
+
+| kind | subject |
+|---|---|
+| `welcome` | `Добро пожаловать в Птицы Москвы!` |
+| `password-reset` | `Сброс пароля` |
+| `order-paid` | `Заказ оплачен — ваши билеты готовы` |
+
+**Templates:** plain responsive HTML with a text fallback (`text` field in nodemailer). Keep templates inline in the module — no template engine, no file reads at runtime. Each template receives only the `data` object already passed by the caller.
+
+Template data contracts (unchanged from callers):
+
+| kind | `data` fields used |
+|---|---|
+| `welcome` | `name` — user's display name |
+| `password-reset` | `link` — full reset URL (already built by the route) |
+| `order-paid` | `orderId` — the order UUID |
+
+**Error handling:** `sendMail` catches all transport errors, logs them with `console.error('[mail] send failed:', err)`, and returns without rethrowing. A mail failure must never fail the HTTP response that triggered it.
+
+**Missing config guard:** if `POSTBOX_SMTP_USER` is falsy at call time, `sendMail` logs a warning (`[mail] POSTBOX_SMTP_USER not set — skipping`) and returns early. The server must not crash at startup due to absent mail config.
+
+---
+
+### 4. Fix `lib/payments/applyPaymentResult.ts`
+
+In `handleSucceeded`, after the transaction commits, look up the buyer's email with a separate query **outside the transaction** (the transaction is already settled; no need to hold the lock during a mail dispatch):
+
+```ts
+const user = await prisma.user.findUnique({
+  where: { id: order.userId },
+  select: { email: true },
+})
+
+if (user) {
+  await sendMail({ kind: 'order-paid', to: user.email, data: { orderId: order.id } })
+} else {
+  console.error('[mail] order-paid: user not found for userId', order.userId)
+}
+```
+
+The `sendMail` call must move **outside** `prisma.$transaction` — it must not block or extend the DB transaction.
+
+---
+
+### 5. Yandex Cloud setup (manual, outside the codebase)
+
+These steps are done once per environment (staging / production) by whoever holds the Yandex Cloud credentials. They are a prerequisite for the env vars above to be valid.
+
+1. **Create a service account** named `postbox-user` with the `postbox.sender` role in the same folder as the Postbox address.
+2. **Create an API key** scoped to `yc.postbox.send`. Record the key ID (`POSTBOX_SMTP_USER`) and secret (`POSTBOX_SMTP_PASSWORD`).
+3. **Create an address identity** in the Yandex Cloud Postbox console for the sender domain.
+4. **Add the DNS records** generated by the console (DKIM TXT record). Wait up to 24 hours; trigger manual re-verification if needed.
+5. Set the four `POSTBOX_*` env vars on the VPS and in any CI secrets.
+
+> Local development: leave `POSTBOX_SMTP_USER` unset. `sendMail` will skip silently. Tests mock the transporter and never connect to the real service.
+
+---
+
+## Files to create or modify
+
+| File | Action | Reason |
+|---|---|---|
+| `lib/mail.ts` | Replace stub | Core implementation |
+| `lib/payments/applyPaymentResult.ts` | Fix `to` bug, move `sendMail` outside transaction | Known bug |
+| `.env.example` | Add `POSTBOX_*` vars | Config documentation |
+| `__tests__/lib/mail.test.ts` | **Create** | TDD — templates + send path |
+| `__tests__/payments/applyPaymentResult.test.ts` | **Update** | Fix assertion: `to` must be user email, not UUID |
+
+No other caller files change. `app/api/auth/register/route.ts` and `app/api/auth/request-password-reset/route.ts` are untouched — the `sendMail` signature is unchanged.
+
+---
+
+## Success criteria
+
+All criteria must be mechanically verifiable.
+
+1. **`pnpm test:run` passes with zero failures and zero skipped tests** — including the updated `applyPaymentResult` test and the new mail tests.
+2. **`pnpm build` produces no TypeScript errors.**
+3. **`sendMail({ to, kind: 'welcome', data: { name } })` calls `transporter.sendMail`** with `to` matching the passed address, `subject` equal to `Добро пожаловать в Птицы Москвы!`, and `html` containing `name`.
+4. **`sendMail({ to, kind: 'password-reset', data: { link } })` calls `transporter.sendMail`** with `html` containing `link` and `subject` equal to `Сброс пароля`.
+5. **`sendMail({ to, kind: 'order-paid', data: { orderId } })` calls `transporter.sendMail`** with `html` containing `orderId`.
+6. **When `POSTBOX_SMTP_USER` is `undefined`, `sendMail` returns without calling `transporter.sendMail`** and does not throw.
+7. **When `transporter.sendMail` rejects, `sendMail` does not rethrow** — the calling test confirms the returned promise resolves.
+8. **`applyPaymentResult` with a `succeeded` payment calls `sendMail` with `to` equal to the user's `email` field** (not `userId`). Confirmed by the updated mock assertion in `__tests__/payments/applyPaymentResult.test.ts`.
+9. **`applyPaymentResult` with a `succeeded` payment where the user record is not found does not throw** — it logs and continues.
+
+---
+
+## Edge cases
+
+| Case | Expected behaviour |
+|---|---|
+| `POSTBOX_SMTP_USER` not set | Log warning, skip send, do not crash |
+| SMTP timeout or network error | Caught, `console.error` logged, promise resolves |
+| `order-paid`: user not found in DB | Log error, skip send, do not throw |
+| `order-paid`: user soft-deleted (`deletedAt` set) after order was placed | Still send — `findUnique` on `id` will find soft-deleted users; the payment is real and the ticket exists |
+| `password-reset` email transport fails | Log error, return; the HTTP response is still `200 SAFE_RESPONSE` — the reset token exists in DB, operator must re-trigger |
+| Duplicate `applyPaymentResult` call (idempotent path) | Already handled upstream (`if order.status === 'PAID' return`) — `sendMail` is never reached twice |
