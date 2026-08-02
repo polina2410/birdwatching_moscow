@@ -25,17 +25,34 @@ interface OrderRecord {
  * in the target state — safe to call twice with the same notification.
  */
 export async function applyPaymentResult(input: ApplyPaymentResultInput): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+  const paidOrder = await prisma.$transaction(async (tx) => {
     const order = await findOrder(tx, input)
-    if (!order) return
+    if (!order) return null
 
-    if (input.status === 'pending') return
+    if (input.status === 'pending') return null
     if (input.status === 'canceled') {
       await handleCanceled(tx, order)
-      return
+      return null
     }
-    await handleSucceeded(tx, order, input.amountKopecks)
+    return handleSucceeded(tx, order, input.amountKopecks)
   })
+
+  if (paidOrder) {
+    await sendOrderPaidMail(paidOrder.orderId, paidOrder.userId)
+  }
+}
+
+// Runs after the transaction has committed — the DB lock is already released,
+// so a slow or failing mail dispatch never extends it.
+async function sendOrderPaidMail(orderId: string, userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+
+  if (!user) {
+    console.error('[mail] order-paid: user not found for userId', userId)
+    return
+  }
+
+  await sendMail({ kind: 'order-paid', to: user.email, data: { orderId } })
 }
 
 async function findOrder(
@@ -62,8 +79,8 @@ async function handleSucceeded(
   tx: Prisma.TransactionClient,
   order: OrderRecord,
   amountKopecks: number
-): Promise<void> {
-  if (order.status === 'PAID') return // idempotent — already settled, never re-issue tickets
+): Promise<{ orderId: string; userId: string } | null> {
+  if (order.status === 'PAID') return null // idempotent — already settled, never re-issue tickets
 
   if (amountKopecks !== order.totalKopecks) {
     await tx.order.update({
@@ -72,7 +89,7 @@ async function handleSucceeded(
         paymentIssue: `Amount mismatch: expected ${order.totalKopecks} kopecks, received ${amountKopecks} kopecks`,
       },
     })
-    return
+    return null
   }
 
   // Honour a successful payment even if our own hold expired — the customer's
@@ -95,8 +112,5 @@ async function handleSucceeded(
     await tx.ticket.createMany({ data: ticketsData })
   }
 
-  // NOTE: `to` should be the buyer's account email; resolving it needs a User lookup
-  // that isn't wired up yet. lib/mail.ts is still a stub (out of scope per spec), so
-  // the exact value doesn't affect delivery today.
-  await sendMail({ kind: 'order-paid', to: order.userId, data: { orderId: order.id } })
+  return { orderId: order.id, userId: order.userId }
 }

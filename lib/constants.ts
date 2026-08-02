@@ -25,3 +25,9 @@ export const YOOKASSA_DESCRIPTION_MAX_LENGTH = 128
 
 // Return-page reconciliation poll cadence
 export const ORDER_STATUS_POLL_INTERVAL_MS = 2000
+
+// Yandex Cloud Postbox — SMTP gateway is fixed by the provider, not an env var
+export const POSTBOX_SMTP_HOST = 'postbox.cloud.yandex.net'
+export const POSTBOX_SMTP_PORT = 587
+export const POSTBOX_DEFAULT_FROM_ADDRESS = 'no-reply@localhost'
+export const POSTBOX_DEFAULT_FROM_NAME = 'Птицы Москвы'
