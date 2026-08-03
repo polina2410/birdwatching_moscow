@@ -2,7 +2,7 @@
 
 Assumes `/feature start` has already run: failing tests exist and are committed.
 
-1. Read `context/features/current-feature.md` — verify Status is "In Progress"
+1. Read `dev/features/current-feature.md` — verify Status is "In Progress"
 2. Run `pnpm test:run` — confirm the failing tests from the checkpoint are still red. If any pass already, investigate before proceeding
 3. Implement each goal / success criterion using the minimum code needed to pass the tests. For each:
    - Write implementation code
@@ -23,8 +23,8 @@ Assumes `/feature start` has already run: failing tests exist and are committed.
 ## Validate
 
 12. Extract the feature name from `current-feature.md` H1 (e.g. `# Current Feature: signup-form` → `signup-form`).
-    - If `context/specs/<feature-name>/spec.md` exists: find the **Success criteria** section and map each criterion to the test that proves it
-    - If only `context/specs/<feature-name>/story.md` exists: find the **Acceptance criteria** section and map each criterion to the test that proves it
+    - If `dev/specs/<feature-name>/spec.md` exists: find the **Success criteria** section and map each criterion to the test that proves it
+    - If only `dev/specs/<feature-name>/story.md` exists: find the **Acceptance criteria** section and map each criterion to the test that proves it
     - If neither exists (inline load): map each Goal from `current-feature.md` to the test that proves it
 
 13. Output a validation table:

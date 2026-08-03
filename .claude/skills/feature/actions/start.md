@@ -1,11 +1,11 @@
 # Start Action
 
-1. Read `context/features/current-feature.md` — check Status and Goals
+1. Read `dev/features/current-feature.md` — check Status and Goals
 2. If Status is already "In Progress", error: "Feature already started. Run /feature implement to continue, or reset current-feature.md manually if you need to restart."
 3. If Goals are empty, error: "Run /feature load first"
 4. Extract the feature name from the H1 heading (e.g. `# Current Feature: signup-form` → `signup-form`). Determine the test source:
-   - If `context/specs/<feature-name>/spec.md` exists: read its **Success criteria** section — this drives the tests
-   - If only `context/specs/<feature-name>/story.md` exists: read its **Acceptance criteria** section — this drives the tests
+   - If `dev/specs/<feature-name>/spec.md` exists: read its **Success criteria** section — this drives the tests
+   - If only `dev/specs/<feature-name>/story.md` exists: read its **Acceptance criteria** section — this drives the tests
    - If neither exists (inline load): tests will be derived from the **Goals** in `current-feature.md` — no file to read
 5. Check whether the branch named `<feature-name>` already exists locally or on origin:
    - `git branch --list <feature-name>` — local check

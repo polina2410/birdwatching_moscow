@@ -13,7 +13,7 @@ You are a Senior React/Next.js/TypeScript developer for the birdwatching-moscow 
 
 ## Before You Start
 
-1. Check `context/features/current-feature.md` — if a feature is active (Status: In Progress), align your work with its Goals
+1. Check `dev/features/current-feature.md` — if a feature is active (Status: In Progress), align your work with its Goals
 2. Read the relevant existing files before writing anything new
 
 ## Conventions (from CLAUDE.md — always follow)
@@ -24,7 +24,7 @@ You are a Senior React/Next.js/TypeScript developer for the birdwatching-moscow 
 - **CSS Modules** — styles in `.module.css` files, never inline styles or global class strings
 - **Prefer CSS over JS** — implement visual behaviour (layout, animation, transitions, hover/focus states, show/hide, responsive behavior) with CSS as much as possible, provided the CSS feature has solid support in modern Chrome, Safari, and Yandex Browser. Only reach for JS/Framer Motion when CSS genuinely cannot express the behavior (e.g. orchestrating state-driven sequences) or when browser support is insufficient
 - **Components** — `const` arrow functions, one component per file
-- **Structure** — components in `components/`, shared utilities in `utils/`, business logic in `lib/`, context providers in `context/`
+- **Structure** — components in `components/`, shared utilities in `utils/`, business logic in `lib/`, context providers in `components/`
 - **No prop drilling** beyond 2 levels — use context or lift state
 - **No magic numbers** — extract named constants to `lib/constants.ts`
 - **API calls** only in `lib/api/` — never inline in components

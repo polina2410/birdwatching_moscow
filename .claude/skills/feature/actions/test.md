@@ -1,6 +1,6 @@
 # Test Action
 
-1. Read `context/features/current-feature.md` — verify Status is "In Progress". If not, error: "No feature is in progress. Run /feature load and /feature start first."
+1. Read `dev/features/current-feature.md` — verify Status is "In Progress". If not, error: "No feature is in progress. Run /feature load and /feature start first."
 2. Run `git diff main...HEAD --name-only` to get the list of files changed in this feature. Pass this list to the `coverage` agent to identify uncovered functions and branches within these files — not just files with zero coverage, but any testable logic that lacks coverage.
 3. For uncovered functions and branches with testable logic, use the `test-master` skill to write unit tests:
     - Focus on server actions and utilities (not components)

@@ -6,7 +6,7 @@ argument-hint: run|check
 
 Review the codebase for cleanup tasks:
 
-1. Make sure that the history in @context/features/features-history.md is in order from oldest to newest
+1. Make sure that the history in @dev/features/features-history.md is in order from oldest to newest
 2. Find unnecessary console.log statements
 3. Find unused imports
 4. Check for stale TODO comments

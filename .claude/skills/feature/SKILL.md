@@ -10,7 +10,7 @@ Manages the full lifecycle of a feature from spec to merge.
 
 ## Working File
 
-@context/features/current-feature.md
+@dev/features/current-feature.md
 
 ### File Structure
 
@@ -20,7 +20,7 @@ current-feature.md has these sections:
 - `## Status` - Not Started | In Progress
 - `## Goals` - Bullet points of what success looks like
 - `## Notes` - Additional context, constraints, or details from spec
-- `## History` - Placeholder only — completed features are appended to `context/features/features-history.md`, not here
+- `## History` - Placeholder only — completed features are appended to `dev/features/features-history.md`, not here
 
 ## Task
 

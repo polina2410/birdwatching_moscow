@@ -25,7 +25,7 @@ Specs are the source of truth. Code follows the spec; the spec follows the story
 ### Where artefacts live
 
 ```
-context/specs/<feature-name>/
+dev/specs/<feature-name>/
   story.md    # (optional) human-written user story + acceptance criteria
   spec.md     # produced by the BA agent — what to build, edge cases, success criteria
 ```
@@ -125,9 +125,9 @@ pnpm exec vitest run __tests__/lib/utils.test.ts  # run a single test file
 - Custom hooks in `hooks/`
 - TypeScript types in `types/`
 - Shared utility functions in `utils/`
-- React context providers in `context/`
-- Feature tracking in `context/features/` (`current-feature.md`, `features-history.md`)
-- Specs live in `context/specs/<feature-name>/`
+- React context providers in `components/`
+- Feature tracking in `dev/features/` (`current-feature.md`, `features-history.md`)
+- Specs live in `dev/specs/<feature-name>/`
 - One component per file
 - No prop drilling beyond 2 levels — use context or lift state
 
@@ -151,7 +151,7 @@ Deployed on **Selectel VPS** (not Vercel/serverless). Implications:
 
 ## Git
 
-- Branch names: `kebab-case` derived from feature name (matches `context/specs/<feature-name>/`)
+- Branch names: `kebab-case` derived from feature name (matches `dev/specs/<feature-name>/`)
 - Commit failing tests as their own checkpoint before implementation (`test: ...`) — see the TDD cycle
 - Do not amend or overwrite a failing-test checkpoint commit during implementation; the diff is the safety net
 - Never force-push main

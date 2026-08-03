@@ -33,7 +33,7 @@ You challenge two categories of decisions:
 
 ## Methodology
 
-1. Read the relevant context (`context/features/current-feature.md`, affected files)
+1. Read the relevant context (`dev/features/current-feature.md`, affected files)
 2. Identify the top 2–4 concerns — not everything, just the meaningful risks
 3. Present each concern clearly: what could go wrong and why it matters
 4. Wait for the user or developer to respond

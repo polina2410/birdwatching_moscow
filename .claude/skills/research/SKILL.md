@@ -13,10 +13,10 @@ Execute research task: $ARGUMENTS
 ### Instructions
 
 1. If no argument provided, error: "Usage: /research <prompt-name>"
-2. Look for prompt file at `context/research/{$ARGUMENTS}.md`
-3. If not found, error: "Prompt file not found at context/research/{$ARGUMENTS}.md"
+2. Look for prompt file at `dev/research/{$ARGUMENTS}.md`
+3. If not found, error: "Prompt file not found at dev/research/{$ARGUMENTS}.md"
 4. Read the prompt file which should contain:
-    - **Output**: Where to write results (e.g., `context/content-types.md`)
+    - **Output**: Where to write results (e.g., `dev/content-types.md`)
     - **Research**: What to investigate
     - **Include**: Specific details to capture
     - **Sources**: What files/tools to use

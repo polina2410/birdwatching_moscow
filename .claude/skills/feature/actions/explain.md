@@ -1,6 +1,6 @@
 # Explain Action
 
-1. Read `context/features/current-feature.md` — verify Status is "In Progress". If not, error: "No feature is in progress. Run /feature load and /feature start first."
+1. Read `dev/features/current-feature.md` — verify Status is "In Progress". If not, error: "No feature is in progress. Run /feature load and /feature start first."
 2. Run `git diff main...HEAD --name-only` to get list of files changed
 3. For each file created or modified:
     - Show the file path

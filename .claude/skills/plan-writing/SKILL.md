@@ -2,7 +2,7 @@
 name: plan-writing
 description: >
   Structured task decomposition before implementation. Use before starting any non-trivial
-  feature, refactor, or bug fix. Produces a concise, verifiable plan saved to context/plans/.
+  feature, refactor, or bug fix. Produces a concise, verifiable plan saved to dev/plans/.
   Trigger words: plan, let's plan, before we start, design the approach, break this down.
 argument-hint: <task-description>
 ---
@@ -22,7 +22,7 @@ Write a plan for: $ARGUMENTS
 - **Max 1 page** — if it's longer, simplify
 - **5–10 tasks** — no more, no fewer
 - Each task must have a **concrete action** and a **verifiable outcome**
-- Save the plan to `context/plans/{task-slug}.md`
+- Save the plan to `dev/plans/{task-slug}.md`
 - Update checkboxes as work progresses
 
 ---
@@ -33,7 +33,7 @@ Write a plan for: $ARGUMENTS
 2. Identify affected files (read them before writing the plan)
 3. Break work into 5–10 sequential tasks; each implementable task must include a failing-tests step before the implementation step (see TDD pattern below)
 5. Write the plan using the format below
-6. Save to `context/plans/{task-slug}.md`
+6. Save to `dev/plans/{task-slug}.md`
 7. Show a summary and ask for approval before starting
 
 ---
