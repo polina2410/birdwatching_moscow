@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
-const authMock = vi.fn()
+const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }))
 vi.mock('@/lib/auth', () => ({ auth: authMock }))
 
 import Home from '@/app/page'

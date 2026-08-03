@@ -1,17 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const authMock = vi.fn()
-vi.mock('@/lib/auth', () => ({ auth: authMock }))
-
 const txMock = {
   user: { update: vi.fn(), count: vi.fn() },
   roleChangeLog: { create: vi.fn() },
 }
-const prismaMock = {
-  $transaction: vi.fn().mockImplementation(async (cb: (tx: typeof txMock) => unknown) => cb(txMock)),
-  user: { findFirst: vi.fn(), update: vi.fn(), count: vi.fn() },
-}
 
+const { authMock, prismaMock } = vi.hoisted(() => {
+  const txMock = {
+    user: { update: vi.fn(), count: vi.fn() },
+    roleChangeLog: { create: vi.fn() },
+  }
+  return {
+    authMock: vi.fn(),
+    prismaMock: {
+      $transaction: vi.fn().mockImplementation(async (cb: (tx: typeof txMock) => unknown) => cb(txMock)),
+      user: { findFirst: vi.fn(), update: vi.fn(), count: vi.fn() },
+      _tx: txMock,
+    },
+  }
+})
+
+vi.mock('@/lib/auth', () => ({ auth: authMock }))
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 
 import { changeUserRole, blockUser } from '@/app/admin/users/_actions'
@@ -19,14 +28,18 @@ import { changeUserRole, blockUser } from '@/app/admin/users/_actions'
 const SUPERADMIN_SESSION = { user: { id: 'su-1', role: 'SUPERADMIN' as const, name: 'SA' } }
 const ADMIN_SESSION = { user: { id: 'a-1', role: 'ADMIN' as const, name: 'A' } }
 
+// Access the tx mock via the hoisted prismaMock
+const tx = prismaMock._tx
+
 beforeEach(() => {
   vi.clearAllMocks()
   authMock.mockResolvedValue(SUPERADMIN_SESSION)
   prismaMock.user.findFirst.mockResolvedValue({ id: 'target-1', role: 'USER', deletedAt: null, blockedAt: null })
   prismaMock.user.count.mockResolvedValue(2)
-  txMock.user.count.mockResolvedValue(2)
-  txMock.user.update.mockResolvedValue({})
-  txMock.roleChangeLog.create.mockResolvedValue({})
+  prismaMock.$transaction.mockImplementation(async (cb: (t: typeof tx) => unknown) => cb(tx))
+  tx.user.count.mockResolvedValue(2)
+  tx.user.update.mockResolvedValue({})
+  tx.roleChangeLog.create.mockResolvedValue({})
 })
 
 describe('changeUserRole — permissions', () => {
@@ -56,10 +69,10 @@ describe('changeUserRole — happy path', () => {
 
   it('writes both User.role update and RoleChangeLog inside the transaction', async () => {
     await changeUserRole('target-1', 'ADMIN')
-    expect(txMock.user.update).toHaveBeenCalledWith(
+    expect(tx.user.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ role: 'ADMIN' }) })
     )
-    expect(txMock.roleChangeLog.create).toHaveBeenCalled()
+    expect(tx.roleChangeLog.create).toHaveBeenCalled()
   })
 })
 

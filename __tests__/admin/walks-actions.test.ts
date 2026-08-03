@@ -1,18 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const authMock = vi.fn()
+const { authMock, walkMock, ticketMock, cartItemMock } = vi.hoisted(() => ({
+  authMock: vi.fn(),
+  walkMock: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
+  ticketMock: { count: vi.fn() },
+  cartItemMock: { aggregate: vi.fn() },
+}))
+
 vi.mock('@/lib/auth', () => ({ auth: authMock }))
-
-const walkMock = { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() }
-const ticketMock = { count: vi.fn() }
-const cartItemMock = { aggregate: vi.fn() }
-
 vi.mock('@/lib/prisma', () => ({
-  prisma: {
-    walk: walkMock,
-    ticket: ticketMock,
-    cartItem: cartItemMock,
-  },
+  prisma: { walk: walkMock, ticket: ticketMock, cartItem: cartItemMock },
 }))
 
 import {
@@ -24,7 +21,6 @@ import {
 } from '@/app/admin/walks/_actions'
 
 const ADMIN_SESSION = { user: { id: 'u1', role: 'ADMIN' as const, name: 'Admin' } }
-
 const FUTURE = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
 const PAST = new Date(Date.now() - 60 * 60 * 1000).toISOString()
 

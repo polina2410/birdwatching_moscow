@@ -1,13 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const authMock = vi.fn()
-vi.mock('@/lib/auth', () => ({ auth: authMock }))
+const { authMock, expeditionMock, expeditionDayMock, requestMock } = vi.hoisted(() => ({
+  authMock: vi.fn(),
+  expeditionMock: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
+  expeditionDayMock: { deleteMany: vi.fn(), createMany: vi.fn() },
+  requestMock: { count: vi.fn() },
+}))
 
+vi.mock('@/lib/auth', () => ({ auth: authMock }))
 vi.mock('@/lib/prisma', () => ({
   prisma: {
-    expedition: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
-    expeditionDay: { deleteMany: vi.fn(), createMany: vi.fn() },
-    request: { count: vi.fn() },
+    expedition: expeditionMock,
+    expeditionDay: expeditionDayMock,
+    request: requestMock,
   },
 }))
 
@@ -33,13 +38,12 @@ const VALID_EXPEDITION_INPUT = {
 beforeEach(() => {
   vi.clearAllMocks()
   authMock.mockResolvedValue(ADMIN_SESSION)
+  expeditionMock.create.mockResolvedValue({ id: 'exp-1' })
+  expeditionMock.findFirst.mockResolvedValue(null)
 })
 
 describe('createExpedition — gallery URLs', () => {
   it('accepts galleryUrls with 5 or fewer items', async () => {
-    const { prisma } = await import('@/lib/prisma')
-    const expMock = prisma.expedition as { create: ReturnType<typeof vi.fn> }
-    expMock.create.mockResolvedValue({ id: 'exp-1' })
     const input = {
       ...VALID_EXPEDITION_INPUT,
       galleryUrls: Array.from({ length: 5 }, (_, i) => `https://example.com/g${i}.jpg`),

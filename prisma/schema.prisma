@@ -77,6 +77,7 @@ model Walk {
   guideId       Int
   status        EventStatus @default(DRAFT)
   coverPhotoUrl String      @db.VarChar(2048)
+  galleryUrl    String?     @db.VarChar(2048)
   publishedAt   DateTime?
   publishedBy   String?
   createdAt     DateTime    @default(now())
@@ -102,6 +103,7 @@ model Expedition {
   spotsLeft     Int
   status        EventStatus @default(DRAFT)
   coverPhotoUrl String      @db.VarChar(2048)
+  galleryUrls   String[]
   publishedAt   DateTime?
   publishedBy   String?
   createdAt     DateTime    @default(now())

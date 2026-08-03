@@ -1,18 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const authMock = vi.fn()
+const { authMock, teamMemberMock, walkMock, expeditionMock } = vi.hoisted(() => ({
+  authMock: vi.fn(),
+  teamMemberMock: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  walkMock: { count: vi.fn() },
+  expeditionMock: { count: vi.fn() },
+}))
+
 vi.mock('@/lib/auth', () => ({ auth: authMock }))
-
-const teamMemberMock = { findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() }
-const walkMock = { count: vi.fn() }
-const expeditionMock = { count: vi.fn() }
-
 vi.mock('@/lib/prisma', () => ({
-  prisma: {
-    teamMember: teamMemberMock,
-    walk: walkMock,
-    expedition: expeditionMock,
-  },
+  prisma: { teamMember: teamMemberMock, walk: walkMock, expedition: expeditionMock },
 }))
 
 import { deleteTeamMember } from '@/app/admin/team/_actions'
