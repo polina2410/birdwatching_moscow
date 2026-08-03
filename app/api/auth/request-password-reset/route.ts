@@ -56,9 +56,13 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // APP_URL preferred; NEXT_PUBLIC_APP_URL as legacy fallback.
+    // Never use req.headers.get('host') here — a spoofed Host header would
+    // redirect the victim's reset token to an attacker-controlled domain.
     const baseUrl =
+      process.env.APP_URL ??
       process.env.NEXT_PUBLIC_APP_URL ??
-      `${process.env.NODE_ENV === 'production' ? 'https' : 'http'}://${req.headers.get('host') ?? 'localhost:3000'}`
+      'http://localhost:3000'
 
     const link = `${baseUrl}/reset-password/${rawToken}`
 

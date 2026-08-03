@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { prismaMock, sendMailMock, generateLoginCodeMock, hashLoginCodeMock } = vi.hoisted(() => ({
+const { prismaMock, sendMailMock, generateLoginCodeMock, hashLoginCodeMock, checkRateLimitMock } = vi.hoisted(() => ({
   prismaMock: {
     user: { findFirst: vi.fn() },
     loginCode: { deleteMany: vi.fn(), create: vi.fn() },
@@ -8,10 +8,12 @@ const { prismaMock, sendMailMock, generateLoginCodeMock, hashLoginCodeMock } = v
   sendMailMock: vi.fn(),
   generateLoginCodeMock: vi.fn().mockReturnValue('ABCD2F'),
   hashLoginCodeMock: vi.fn().mockReturnValue('a'.repeat(64)),
+  checkRateLimitMock: vi.fn().mockResolvedValue({ allowed: true, retryAfterSeconds: 0 }),
 }))
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('@/lib/mail', () => ({ sendMail: sendMailMock }))
+vi.mock('@/lib/rateLimit', () => ({ checkRateLimit: checkRateLimitMock }))
 vi.mock('@/lib/login-code', () => ({
   generateLoginCode: generateLoginCodeMock,
   hashLoginCode: hashLoginCodeMock,
@@ -43,6 +45,7 @@ beforeEach(() => {
   prismaMock.loginCode.deleteMany.mockResolvedValue({ count: 0 })
   prismaMock.loginCode.create.mockResolvedValue({ id: 'code-1' })
   sendMailMock.mockResolvedValue(undefined)
+  checkRateLimitMock.mockResolvedValue({ allowed: true, retryAfterSeconds: 0 })
 })
 
 describe('POST /api/auth/request-login-code — registered USER', () => {
@@ -107,6 +110,16 @@ describe('POST /api/auth/request-login-code — safe response (no action taken)'
 
   it('soft-deleted USER → 200, no mail, no row', () =>
     expectSafeNoAction({ email: USER.email }, null)) // findFirst with deletedAt:null returns null
+})
+
+describe('POST /api/auth/request-login-code — rate limiting', () => {
+  it('returns 429 when rate limit exceeded', async () => {
+    checkRateLimitMock.mockResolvedValue({ allowed: false, retryAfterSeconds: 45 })
+    const res = await POST(makeReq({ email: USER.email }))
+    expect(res.status).toBe(429)
+    expect(res.headers.get('Retry-After')).toBe('45')
+    expect(sendMailMock).not.toHaveBeenCalled()
+  })
 })
 
 describe('POST /api/auth/request-login-code — validation', () => {
