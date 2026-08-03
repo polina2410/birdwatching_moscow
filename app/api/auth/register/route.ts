@@ -13,32 +13,37 @@ export async function POST(req: Request) {
 
   const { email, name } = result.data
 
-  const existing = await prisma.user.findFirst({
-    where: { email, deletedAt: null },
-  })
+  try {
+    const existing = await prisma.user.findFirst({
+      where: { email, deletedAt: null },
+    })
 
-  if (existing) {
-    return NextResponse.json(
-      { error: 'Email is already taken' },
-      { status: 409 }
-    )
+    if (existing) {
+      return NextResponse.json(
+        { error: 'Email is already taken' },
+        { status: 409 }
+      )
+    }
+
+    // Passwordless: regular accounts sign in with an emailed one-time code
+    await prisma.user.create({
+      data: {
+        email,
+        name,
+        passwordHash: null,
+        role: 'USER',
+      },
+    })
+
+    await sendMail({
+      to: email,
+      kind: 'welcome',
+      data: { name },
+    })
+  } catch (err) {
+    console.error('POST /api/auth/register failed', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-
-  // Passwordless: regular accounts sign in with an emailed one-time code
-  await prisma.user.create({
-    data: {
-      email,
-      name,
-      passwordHash: null,
-      role: 'USER',
-    },
-  })
-
-  await sendMail({
-    to: email,
-    kind: 'welcome',
-    data: { name },
-  })
 
   return NextResponse.json({ ok: true })
 }
