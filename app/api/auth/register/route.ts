@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { registerSchema } from '@/lib/validation/auth'
 import { sendMail } from '@/lib/mail'
 import { validateRequest } from '@/lib/api/validate'
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   const result = await validateRequest(req, registerSchema)
 
   if (!result.success) {

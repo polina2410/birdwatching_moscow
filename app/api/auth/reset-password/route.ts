@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
@@ -8,7 +8,7 @@ import { validateRequest } from '@/lib/api/validate'
 
 const INVALID_LINK = { error: 'Invalid or expired link' }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   const result = await validateRequest(req, confirmResetSchema)
 
   if (!result.success) {

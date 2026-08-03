@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requestLoginCodeSchema } from '@/lib/validation/auth'
 import { generateLoginCode, hashLoginCode } from '@/lib/login-code'
@@ -11,7 +11,7 @@ import { checkRateLimit } from '@/lib/rateLimit'
 // anything else would turn this endpoint into an email-enumeration oracle.
 const SAFE_RESPONSE = { ok: true }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   const ip =
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
     req.headers.get('x-real-ip') ??

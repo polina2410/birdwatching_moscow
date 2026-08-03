@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { requestResetSchema } from '@/lib/validation/auth'
@@ -11,7 +11,7 @@ const SAFE_RESPONSE = {
   message: 'If this email is registered, a reset link has been sent.',
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   const result = await validateRequest(req, requestResetSchema)
 
   if (!result.success) {
