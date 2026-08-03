@@ -20,57 +20,63 @@ export async function POST(req: Request) {
 
   const { email } = result.data
 
-  const user = await prisma.user.findFirst({
-    where: {
-      email,
-      deletedAt: null,
-    },
-  })
-
-  // USER accounts have no password to reset — they sign in with an emailed code
-  if (user && user.role !== 'USER') {
-    await prisma.passwordResetToken.deleteMany({
+  try {
+    const user = await prisma.user.findFirst({
       where: {
-        userId: user.id,
-        usedAt: null,
+        email,
+        deletedAt: null,
       },
     })
 
-    // Raw token goes into the URL; only SHA-256 hash is stored
-    const rawToken = crypto.randomBytes(32).toString('base64url')
+    // USER accounts have no password to reset — they sign in with an emailed code
+    if (user && user.role !== 'USER') {
+      await prisma.passwordResetToken.deleteMany({
+        where: {
+          userId: user.id,
+          usedAt: null,
+        },
+      })
 
-    const tokenHash = crypto
-      .createHash('sha256')
-      .update(rawToken)
-      .digest('hex')
+      // Raw token goes into the URL; only SHA-256 hash is stored
+      const rawToken = crypto.randomBytes(32).toString('base64url')
 
-    const expiresAt = new Date(
-      Date.now() + PASSWORD_RESET_TOKEN_TTL_MS
-    )
+      const tokenHash = crypto
+        .createHash('sha256')
+        .update(rawToken)
+        .digest('hex')
 
-    await prisma.passwordResetToken.create({
-      data: {
-        userId: user.id,
-        tokenHash,
-        expiresAt,
-      },
-    })
+      const expiresAt = new Date(
+        Date.now() + PASSWORD_RESET_TOKEN_TTL_MS
+      )
 
-    // APP_URL preferred; NEXT_PUBLIC_APP_URL as legacy fallback.
-    // Never use req.headers.get('host') here — a spoofed Host header would
-    // redirect the victim's reset token to an attacker-controlled domain.
-    const baseUrl =
-      process.env.APP_URL ??
-      process.env.NEXT_PUBLIC_APP_URL ??
-      'http://localhost:3000'
+      await prisma.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt,
+        },
+      })
 
-    const link = `${baseUrl}/reset-password/${rawToken}`
+      // APP_URL preferred; NEXT_PUBLIC_APP_URL as legacy fallback.
+      // Never use req.headers.get('host') here — a spoofed Host header would
+      // redirect the victim's reset token to an attacker-controlled domain.
+      const baseUrl =
+        process.env.APP_URL ??
+        process.env.NEXT_PUBLIC_APP_URL ??
+        'http://localhost:3000'
 
-    await sendMail({
-      to: email,
-      kind: 'password-reset',
-      data: { link },
-    })
+      const link = `${baseUrl}/reset-password/${rawToken}`
+
+      await sendMail({
+        to: email,
+        kind: 'password-reset',
+        data: { link },
+      })
+    }
+  } catch (err) {
+    // Log but swallow — the safe response must be returned regardless to
+    // prevent email enumeration via infrastructure error timing.
+    console.error('POST /api/auth/request-password-reset failed', err)
   }
 
   return NextResponse.json(SAFE_RESPONSE)
