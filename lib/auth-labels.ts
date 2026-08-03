@@ -15,12 +15,25 @@ export const AUTH_LABELS = {
 
   login: {
     title:        'Вход',
+    staffTitle:   'Вход для сотрудников',
     submit:       'Войти',
     submitting:   'Входим…',
     registerLink: 'Создать аккаунт',
     resetLink:    'Забыли пароль?',
     registered:   'Регистрация прошла успешно. Войдите в аккаунт.',
     passwordReset: 'Пароль обновлён. Войдите в аккаунт.',
+  },
+
+  loginCode: {
+    requestCode:       'Получить код',
+    requesting:        'Отправляем код…',
+    verify:            'Войти',
+    verifying:         'Проверяем код…',
+    codeField:         'Код из письма',
+    codeSentTo:        'Мы отправили код на',
+    passwordLoginLink: 'Вход для сотрудников',
+    resendCode:        'Отправить код снова',
+    changeEmail:       'Указать другой email',
   },
 
   resetRequest: {

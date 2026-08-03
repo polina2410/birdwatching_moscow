@@ -1,37 +1,58 @@
 import NextAuth, { CredentialsSignin } from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
-import bcrypt from 'bcryptjs'
-import { prisma } from '@/lib/prisma'
-import { loginSchema } from '@/lib/validation/auth'
+import { authorizeCredentials, authorizeLoginCode } from '@/lib/auth/authorize'
+import { AuthCodeError } from '@/lib/auth/errors'
+import { SESSION_MAX_AGE_SECONDS, SESSION_UPDATE_AGE_SECONDS } from '@/lib/constants'
 import authConfig from '@/auth.config'
+import type { AuthorizedUser } from '@/types/auth'
 
-class AccountBlockedError extends CredentialsSignin {
-  code = 'account_blocked'
+/**
+ * Auth.js only copies `code` into the client-visible redirect for
+ * `CredentialsSignin` instances; every other error is swallowed as a
+ * generic configuration failure.
+ */
+async function withSigninErrors(
+  run: () => Promise<AuthorizedUser | null>
+): Promise<AuthorizedUser | null> {
+  try {
+    return await run()
+  } catch (err) {
+    if (err instanceof AuthCodeError) {
+      const signinError = new CredentialsSignin()
+      signinError.code = err.code
+      throw signinError
+    }
+    throw err
+  }
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+// NOTE: no `satisfies NextAuthConfig` here — contextually typing this object
+// re-checks the spread `authConfig` callbacks and loses the `next-auth/jwt`
+// module augmentation, which surfaces as bogus `unknown` errors in
+// auth.config.ts. `NextAuth()` still type-checks the argument.
+export const authOptions = {
   ...authConfig,
-  session: { strategy: 'jwt' },
+  // Django's SESSION_COOKIE_AGE (2 weeks); `updateAge` gives the sliding
+  // renewal of SESSION_SAVE_EVERY_REQUEST. Requires middleware.ts to fire.
+  session: {
+    strategy: 'jwt' as const,
+    maxAge: SESSION_MAX_AGE_SECONDS,
+    updateAge: SESSION_UPDATE_AGE_SECONDS,
+  },
   providers: [
+    // ADMIN/SUPERADMIN — password. Both authorize helpers validate the raw
+    // credentials with Zod themselves, so they take them unknown.
     Credentials({
       credentials: { email: {}, password: {} },
-      async authorize(credentials) {
-        const parsed = loginSchema.safeParse(credentials)
-        if (!parsed.success) return null
-
-        const { email, password } = parsed.data
-        const user = await prisma.user.findFirst({
-          where: { email, deletedAt: null },
-        })
-        if (!user) return null
-
-        const passwordMatch = await bcrypt.compare(password, user.passwordHash)
-        if (!passwordMatch) return null
-
-        if (user.blockedAt) throw new AccountBlockedError()
-
-        return { id: user.id, email: user.email, name: user.name, role: user.role }
-      },
+      authorize: (credentials) => withSigninErrors(() => authorizeCredentials(credentials)),
+    }),
+    // USER — one-time code emailed to the address
+    Credentials({
+      id: 'login-code',
+      credentials: { email: {}, code: {} },
+      authorize: (credentials) => withSigninErrors(() => authorizeLoginCode(credentials)),
     }),
   ],
-})
+}
+
+export const { handlers, signIn, signOut, auth } = NextAuth(authOptions)

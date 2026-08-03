@@ -131,7 +131,8 @@ class ExpeditionDay(models.Model):
 class AppUser(models.Model):
     id = models.CharField(max_length=36, primary_key=True, db_column='id', verbose_name='ID')
     email = models.CharField(max_length=254, db_column='email', verbose_name='Email')
-    passwordHash = models.CharField(max_length=255, db_column='passwordHash', verbose_name='Хэш пароля')
+    # NULL for regular accounts — they sign in with a one-time emailed code
+    passwordHash = models.CharField(max_length=255, null=True, blank=True, db_column='passwordHash', verbose_name='Хэш пароля')
     name = models.CharField(max_length=50, db_column='name', verbose_name='Имя')
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.USER, db_column='role', verbose_name='Роль')
     createdAt = models.DateTimeField(db_column='createdAt', verbose_name='Создан')

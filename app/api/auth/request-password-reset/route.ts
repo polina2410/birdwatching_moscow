@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { requestResetSchema } from '@/lib/validation/auth'
@@ -11,7 +11,7 @@ const SAFE_RESPONSE = {
   message: 'If this email is registered, a reset link has been sent.',
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   const result = await validateRequest(req, requestResetSchema)
 
   if (!result.success) {
@@ -27,7 +27,8 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  if (user) {
+  // USER accounts have no password to reset — they sign in with an emailed code
+  if (user && user.role !== 'USER') {
     await prisma.passwordResetToken.deleteMany({
       where: {
         userId: user.id,
@@ -55,9 +56,13 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // APP_URL preferred; NEXT_PUBLIC_APP_URL as legacy fallback.
+    // Never use req.headers.get('host') here — a spoofed Host header would
+    // redirect the victim's reset token to an attacker-controlled domain.
     const baseUrl =
+      process.env.APP_URL ??
       process.env.NEXT_PUBLIC_APP_URL ??
-      `${process.env.NODE_ENV === 'production' ? 'https' : 'http'}://${req.headers.get('host') ?? 'localhost:3000'}`
+      'http://localhost:3000'
 
     const link = `${baseUrl}/reset-password/${rawToken}`
 

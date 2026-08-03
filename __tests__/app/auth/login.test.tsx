@@ -20,12 +20,7 @@ vi.mock('@/utils/safeRedirect', () => ({ safeRedirect: (url: string | null) => u
 
 const L = AUTH_LABELS.login
 const C = AUTH_LABELS.common
-
-function fillAndSubmit({ email = 'ivan@test.com', password = 'password123' } = {}) {
-  fireEvent.change(screen.getByLabelText(C.emailField), { target: { value: email } })
-  fireEvent.change(screen.getByLabelText(C.passwordField), { target: { value: password } })
-  fireEvent.submit(screen.getByRole('button', { name: L.submit }))
-}
+const LC = AUTH_LABELS.loginCode
 
 beforeEach(() => {
   pushMock.mockReset()
@@ -34,113 +29,108 @@ beforeEach(() => {
   searchParamsGetMock.mockReturnValue(null)
 })
 
-describe('LoginPage — rendering & links', () => {
-  it('renders email, password fields, submit button, and navigation links', () => {
+// ── Step 1: email entry ─────────────────────────────────────────────────────
+
+describe('LoginPage — step 1 (email)', () => {
+  it('renders an email field', () => {
     render(<LoginPage />)
     expect(screen.getByLabelText(C.emailField)).toBeDefined()
-    expect(screen.getByLabelText(C.passwordField)).toBeDefined()
-    expect(screen.getByRole('button', { name: L.submit })).toBeDefined()
-
-    expect(screen.getByRole('link', { name: L.registerLink })).toHaveAttribute('href', '/register')
-    expect(screen.getByRole('link', { name: L.resetLink })).toHaveAttribute('href', '/reset-password')
   })
 
-  it('shows registered success banner when ?registered=1', () => {
-    searchParamsGetMock.mockImplementation((key: string) => (key === 'registered' ? '1' : null))
+  it('does not render a password field on step 1', () => {
+    render(<LoginPage />)
+    expect(screen.queryByLabelText(C.passwordField)).toBeNull()
+  })
+
+  it('renders a link to /login/password for admins', () => {
+    render(<LoginPage />)
+    expect(screen.getByRole('link', { name: LC.passwordLoginLink })).toHaveAttribute(
+      'href',
+      '/login/password'
+    )
+  })
+
+  it('does NOT render a link to /reset-password', () => {
+    render(<LoginPage />)
+    expect(screen.queryByRole('link', { name: L.resetLink })).toBeNull()
+  })
+
+  it('shows ?registered=1 banner', () => {
+    searchParamsGetMock.mockImplementation((k: string) => (k === 'registered' ? '1' : null))
     render(<LoginPage />)
     expect(screen.getByText(L.registered)).toBeDefined()
   })
-
-  it('does not show registered banner when ?registered=0 or other values', () => {
-    searchParamsGetMock.mockImplementation((key: string) => (key === 'registered' ? '0' : null))
-    render(<LoginPage />)
-    expect(screen.queryByText(L.registered)).toBeNull()
-  })
-
-  it('shows password-reset banner when ?passwordReset=1', () => {
-    searchParamsGetMock.mockImplementation((key: string) => (key === 'passwordReset' ? '1' : null))
-    render(<LoginPage />)
-    expect(screen.getByText(L.passwordReset)).toBeDefined()
-  })
-
-  it('does not show password-reset banner when ?passwordReset=0 or other values', () => {
-    searchParamsGetMock.mockImplementation((key: string) => (key === 'passwordReset' ? '0' : null))
-    render(<LoginPage />)
-    expect(screen.queryByText(L.passwordReset)).toBeNull()
-  })
 })
 
-describe('LoginPage — success & navigation', () => {
-  it('passes typed credentials to signIn and redirects to default root route', async () => {
+// ── Step 2: code entry ──────────────────────────────────────────────────────
+
+async function submitEmail(email = 'user@test.com') {
+  render(<LoginPage />)
+  fireEvent.change(screen.getByLabelText(C.emailField), { target: { value: email } })
+  fireEvent.submit(screen.getByRole('button', { name: LC.requestCode }))
+  // Wait for step 2 to appear (code input)
+  await waitFor(() => screen.getByLabelText(LC.codeField))
+}
+
+describe('LoginPage — step 2 (code entry)', () => {
+  beforeEach(() => {
+    // Step 1 API call succeeds (endpoint returns ok: true)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }))
+  })
+
+  it('shows code field and no email field after step-1 submit', async () => {
+    await submitEmail()
+    expect(screen.getByLabelText(LC.codeField)).toBeDefined()
+    expect(screen.queryByLabelText(C.emailField)).toBeNull()
+  })
+
+  it('calls signIn("login-code") with email and code on step-2 submit', async () => {
     signInMock.mockResolvedValue({ error: null, code: null })
-    render(<LoginPage />)
-
-    fillAndSubmit({ email: 'user@example.com', password: 'customPassword123' })
-
-    await waitFor(() => {
-      expect(signInMock).toHaveBeenCalledWith('credentials', {
-        email: 'user@example.com',
-        password: 'customPassword123',
+    await submitEmail('user@test.com')
+    fireEvent.change(screen.getByLabelText(LC.codeField), { target: { value: 'ABCD2F' } })
+    fireEvent.submit(screen.getByRole('button', { name: LC.verify }))
+    await waitFor(() =>
+      expect(signInMock).toHaveBeenCalledWith('login-code', {
+        email: 'user@test.com',
+        code: 'ABCD2F',
         redirect: false,
       })
-      expect(pushMock).toHaveBeenCalledWith('/')
-    })
-    expect(refreshMock).toHaveBeenCalled()
+    )
   })
 
-  it('redirects to returnUrl when present in query params', async () => {
-    searchParamsGetMock.mockImplementation((key: string) => (key === 'returnUrl' ? '/dashboard' : null))
+  it('redirects to "/" on success', async () => {
     signInMock.mockResolvedValue({ error: null, code: null })
-
-    render(<LoginPage />)
-    fillAndSubmit()
-
-    await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith('/dashboard')
-    })
-    expect(refreshMock).toHaveBeenCalled()
-  })
-
-  it('disables submit button and shows loading text during submission', async () => {
-    let resolveSignIn!: (val: unknown) => void
-    signInMock.mockImplementation(() => new Promise((res) => { resolveSignIn = res }))
-
-    render(<LoginPage />)
-    fillAndSubmit()
-
-    const button = screen.getByRole('button')
-    expect(button).toBeDisabled()
-    expect(button).toHaveTextContent(L.submitting)
-
-    resolveSignIn({ error: null, code: null })
+    await submitEmail()
+    fireEvent.change(screen.getByLabelText(LC.codeField), { target: { value: 'ABCD2F' } })
+    fireEvent.submit(screen.getByRole('button', { name: LC.verify }))
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/'))
   })
 })
 
+// ── Error handling (step 2) ─────────────────────────────────────────────────
+
 describe('LoginPage — errors', () => {
-  it('shows wrong-credentials error', async () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }))
+  })
+
+  it('CredentialsSignin error → AUTH_ERRORS.invalidCode', async () => {
     signInMock.mockResolvedValue({ error: 'CredentialsSignin', code: null })
-    render(<LoginPage />)
-    fillAndSubmit()
+    await submitEmail()
+    fireEvent.change(screen.getByLabelText(LC.codeField), { target: { value: 'WRONG1' } })
+    fireEvent.submit(screen.getByRole('button', { name: LC.verify }))
     await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent(AUTH_ERRORS.wrongCredentials)
+      expect(screen.getByRole('alert')).toHaveTextContent(AUTH_ERRORS.invalidCode)
     )
   })
 
-  it('shows account-blocked error', async () => {
+  it('account_blocked code → AUTH_ERRORS.accountBlocked', async () => {
     signInMock.mockResolvedValue({ error: 'AccessDenied', code: 'account_blocked' })
-    render(<LoginPage />)
-    fillAndSubmit()
+    await submitEmail()
+    fireEvent.change(screen.getByLabelText(LC.codeField), { target: { value: 'ABCD2F' } })
+    fireEvent.submit(screen.getByRole('button', { name: LC.verify }))
     await waitFor(() =>
       expect(screen.getByRole('alert')).toHaveTextContent(AUTH_ERRORS.accountBlocked)
-    )
-  })
-
-  it('shows network error when signIn throws', async () => {
-    signInMock.mockRejectedValue(new Error('Network failure'))
-    render(<LoginPage />)
-    fillAndSubmit()
-    await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent(AUTH_ERRORS.network)
     )
   })
 })

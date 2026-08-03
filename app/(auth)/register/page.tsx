@@ -35,7 +35,6 @@ export default function RegisterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: form.get('email'),
-          password: form.get('password'),
           name: form.get('name'),
         }),
       })
@@ -71,11 +70,6 @@ export default function RegisterPage() {
           <label htmlFor="email">{C.emailField}</label>
           <input id="email" name="email" type="email" required autoComplete="email" />
           {fieldErrors.email && <span role="alert">{fieldErrors.email.join(', ')}</span>}
-        </div>
-        <div>
-          <label htmlFor="password">{C.passwordField}</label>
-          <input id="password" name="password" type="password" required autoComplete="new-password" minLength={8} />
-          {fieldErrors.password && <span role="alert">{fieldErrors.password.join(', ')}</span>}
         </div>
         <button type="submit" disabled={loading}>
           {loading ? L.submitting : L.submit}

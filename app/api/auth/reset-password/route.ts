@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
@@ -8,7 +8,7 @@ import { validateRequest } from '@/lib/api/validate'
 
 const INVALID_LINK = { error: 'Invalid or expired link' }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   const result = await validateRequest(req, confirmResetSchema)
 
   if (!result.success) {
@@ -49,16 +49,22 @@ export async function POST(req: NextRequest) {
 
   const passwordHash = await bcrypt.hash(newPassword, BCRYPT_COST)
 
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: user.id },
-      data: { passwordHash },
-    }),
-    prisma.passwordResetToken.update({
-      where: { id: resetToken.id },
-      data: { usedAt: now },
-    }),
-  ])
+  // Nested write — Prisma runs the password change and the token burn in a
+  // single transaction, so a used token can never survive a changed password.
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash,
+      // The forced ADMIN/SUPERADMIN rotation is satisfied by this reset
+      passwordResetRequired: false,
+      passwordResetTokens: {
+        update: {
+          where: { id: resetToken.id },
+          data: { usedAt: now },
+        },
+      },
+    },
+  })
 
   return NextResponse.json({ ok: true })
 }

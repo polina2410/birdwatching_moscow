@@ -36,14 +36,19 @@ class AppUserAuthBackend:
         if app_user.blockedAt is not None:
             return None
 
+        # Role first: regular accounts are passwordless, so there is nothing to
+        # check and bcrypt must never see their NULL hash.
+        if app_user.role not in _ADMIN_ROLES:
+            return None
+
         pwd_hash = app_user.passwordHash
+        if not pwd_hash:
+            return None
+
         if isinstance(pwd_hash, str):
             pwd_hash = pwd_hash.encode('utf-8')
 
         if not bcrypt.checkpw(password.encode('utf-8'), pwd_hash):
-            return None
-
-        if app_user.role not in _ADMIN_ROLES:
             return None
 
         django_user, _ = User.objects.get_or_create(

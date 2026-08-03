@@ -49,6 +49,41 @@ class AppUserAuthBackendTest(SimpleTestCase):
 
         self.assertIsNone(result)
 
+    @patch("birdwatch.backends.bcrypt.checkpw", return_value=True)
+    @patch("birdwatch.backends.AppUser.objects")
+    def test_user_role_is_rejected_before_bcrypt_is_called(self, mock_app_user_mgr, mock_checkpw):
+        app_user = MagicMock(role="USER", blockedAt=None, deletedAt=None, passwordHash=b"hash")
+        mock_app_user_mgr.get.return_value = app_user
+
+        result = self.backend.authenticate(None, username="user@test.ru", password="secret")
+
+        self.assertIsNone(result)
+        mock_checkpw.assert_not_called()
+
+    # --- authenticate: passwordless (null hash) accounts ---
+
+    @patch("birdwatch.backends.bcrypt.checkpw", return_value=True)
+    @patch("birdwatch.backends.AppUser.objects")
+    def test_null_password_hash_returns_none_without_error(self, mock_app_user_mgr, mock_checkpw):
+        # Regular accounts are passwordless: passwordHash is NULL in the database
+        app_user = MagicMock(role="USER", blockedAt=None, deletedAt=None, passwordHash=None)
+        mock_app_user_mgr.get.return_value = app_user
+
+        result = self.backend.authenticate(None, username="user@test.ru", password="secret")
+
+        self.assertIsNone(result)
+
+    @patch("birdwatch.backends.bcrypt.checkpw", return_value=True)
+    @patch("birdwatch.backends.AppUser.objects")
+    def test_admin_with_null_password_hash_returns_none(self, mock_app_user_mgr, mock_checkpw):
+        app_user = MagicMock(role="ADMIN", blockedAt=None, deletedAt=None, passwordHash=None)
+        mock_app_user_mgr.get.return_value = app_user
+
+        result = self.backend.authenticate(None, username="admin@test.ru", password="secret")
+
+        self.assertIsNone(result)
+        mock_checkpw.assert_not_called()
+
     # --- authenticate: blocked / deleted ---
 
     @patch("birdwatch.backends.bcrypt.checkpw", return_value=True)
