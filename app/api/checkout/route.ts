@@ -46,6 +46,13 @@ async function createPendingOrder(
     }
 
     const walkIds = [...new Set(activeCartItems.map((item) => item.walkId))]
+
+    // Lock walk rows in sorted order (prevents deadlocks) so concurrent checkouts
+    // for the same walk queue here and the second sees the first's OrderItems.
+    for (const walkId of [...walkIds].sort()) {
+      await tx.$executeRaw`SELECT id FROM "Walk" WHERE id = ${walkId} FOR UPDATE`
+    }
+
     const walks = (await tx.walk.findMany({
       where: { id: { in: walkIds } },
     })) as WalkSnapshot[]

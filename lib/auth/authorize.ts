@@ -93,11 +93,13 @@ export async function authorizeCredentials(
   // No hash — a passwordless USER can never satisfy the password path
   if (!user || !user.passwordHash) return null
 
-  const passwordMatch = await bcrypt.compare(password, user.passwordHash)
-  if (!passwordMatch) return null
-
+  // Status checks before bcrypt: checking after would reveal whether a guessed
+  // password is correct by returning a distinct error code on correct-but-blocked.
   if (user.blockedAt) throw new AccountBlockedError()
   if (user.passwordResetRequired) throw new PasswordResetRequiredError()
+
+  const passwordMatch = await bcrypt.compare(password, user.passwordHash)
+  if (!passwordMatch) return null
 
   return { id: user.id, email: user.email, name: user.name, role: user.role }
 }

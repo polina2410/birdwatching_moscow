@@ -13,7 +13,7 @@
     git add <file1> <file2> ...
     git commit -m "<type>: <brief description>"
     ```
-    Use conventional commits (`feat` for new functionality, `fix` for bug corrections, `chore` for non-feature housekeeping); stage specific files with `git add` rather than `git add .`. If there is nothing to commit, skip this step.
+    Use conventional commits (`feature` for new functionality, `fix` for bug corrections, `chore` for non-feature housekeeping); stage specific files with `git add` rather than `git add .`. If there is nothing to commit, skip this step.
 4. Run `pnpm lint` — fix any errors before continuing.
 5. Run `pnpm test:run` — all tests must be green before proceeding. Fix any failures before continuing.
 6. Run `pnpm build` — fix any TypeScript or Next.js compilation errors before continuing.
@@ -111,7 +111,7 @@ EOF
 
 ---
 
-## Part 2 — Post-merge cleanup (run after human confirms merge)
+## Part 2 — Post-merge clean-up (run after human confirms merge)
 
 11. `git checkout main && git pull`
 12. Delete the local feature branch: `git branch -d <feature-name>`. If this fails (squash-merged branches are not recognised as merged by git), use `git branch -D <feature-name>` to force-delete — this is safe since the PR is already merged.
@@ -124,14 +124,14 @@ EOF
     - If spec exists: use the PR title or the Goal line from `context/specs/<feature-name>/spec.md`
     - If only story.md exists: use the PR title or a summary derived from `context/specs/<feature-name>/story.md`
     - If neither exists (inline load): use the PR title or the Goals from `current-feature.md`
-15. Stage and commit the cleanup files — the path depends on whether main allows direct pushes:
+15. Stage and commit the clean-up files — the path depends on whether main allows direct pushes:
     - **If direct push to main is allowed:**
       ```
       git add context/features/current-feature.md context/features/features-history.md
       git commit -m "chore: post-merge cleanup for <feature>"
       git push
       ```
-    - **If the repo enforces branch protection (PRs required):** commit on a cleanup branch so the local main is never ahead of origin:
+    - **If the repo enforces branch protection (PRs required):** commit on a clean-up branch so the local main is never ahead of origin:
       ```
       git checkout -b chore/reset-<feature>
       git add context/features/current-feature.md context/features/features-history.md

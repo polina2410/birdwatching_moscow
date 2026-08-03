@@ -80,7 +80,11 @@ async function handleSucceeded(
   order: OrderRecord,
   amountKopecks: number
 ): Promise<{ orderId: string; userId: string } | null> {
-  if (order.status === 'PAID') return null // idempotent — already settled, never re-issue tickets
+  // Pessimistic lock — concurrent webhook deliveries queue here; the second one
+  // reads the PAID status committed by the first and exits without re-issuing tickets.
+  await tx.$executeRaw`SELECT id FROM "Order" WHERE id = ${order.id} FOR UPDATE`
+  const fresh = await tx.order.findUnique({ where: { id: order.id }, select: { status: true } })
+  if (!fresh || fresh.status === 'PAID') return null // idempotent — already settled
 
   if (amountKopecks !== order.totalKopecks) {
     await tx.order.update({

@@ -158,3 +158,39 @@ describe('authorizeCredentials — forced rotation', () => {
     ).rejects.toMatchObject({ code: 'password_reset_required' })
   })
 })
+
+describe('authorizeCredentials — blocked account oracle guard (Bug 3 regression)', () => {
+  it('throws AccountBlockedError even when the password is wrong', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ ...ADMIN, blockedAt: new Date() })
+    bcryptCompareMock.mockResolvedValue(false)
+    await expect(
+      authorizeCredentials({ email: ADMIN.email, password: 'wrongpassword' })
+    ).rejects.toMatchObject({ code: 'account_blocked' })
+  })
+
+  it('does not call bcrypt.compare when the account is blocked', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ ...ADMIN, blockedAt: new Date() })
+    await expect(
+      authorizeCredentials({ email: ADMIN.email, password: 'anypassword' })
+    ).rejects.toThrow()
+    expect(bcryptCompareMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('authorizeCredentials — passwordResetRequired oracle guard (Bug 3 regression)', () => {
+  it('throws PasswordResetRequiredError even when the password is wrong', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ ...ADMIN, passwordResetRequired: true })
+    bcryptCompareMock.mockResolvedValue(false)
+    await expect(
+      authorizeCredentials({ email: ADMIN.email, password: 'wrongpassword' })
+    ).rejects.toMatchObject({ code: 'password_reset_required' })
+  })
+
+  it('does not call bcrypt.compare when passwordResetRequired is true', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ ...ADMIN, passwordResetRequired: true })
+    await expect(
+      authorizeCredentials({ email: ADMIN.email, password: 'anypassword' })
+    ).rejects.toThrow()
+    expect(bcryptCompareMock).not.toHaveBeenCalled()
+  })
+})

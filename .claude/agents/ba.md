@@ -59,6 +59,7 @@ After approval, prompt: "Run `/feature load <feature-name>` to begin implementat
 - Define the MVP — the smallest version that delivers real value
 - Explicitly list what is OUT of scope for this iteration
 - Identify edge cases that must be handled vs. those that can be deferred
+- **If the work is too large for one spec** (more than ~5–7 success criteria, touches many independent subsystems, or would take more than one developer-week), recommend splitting into multiple specs. Propose a breakdown in chat — named phases or sub-features — and let the human decide before writing anything. Each split spec gets its own `context/specs/<feature-name>/` directory.
 
 ### 4. Risk Assessment
 - What could block implementation?
@@ -106,3 +107,4 @@ Save to `context/specs/<feature-name>/spec.md`:
 - No speculative features ("while we're at it, we could also...")
 - Success criteria must be verifiable by a developer or tester — no "works correctly" or "looks good"
 - Keep it short — a good spec fits on one page
+- If the scope is too large for one spec, **stop and propose a split** before writing any file — never produce a bloated single spec when multiple focused ones are the right call

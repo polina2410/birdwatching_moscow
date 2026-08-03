@@ -12,6 +12,7 @@ const txMock = {
   ticket: { count: vi.fn() },
   orderItem: { findMany: vi.fn() },
   order: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
+  $executeRaw: vi.fn(),
 }
 const prismaMock = {
   $transaction: vi.fn().mockImplementation(async (cb: (tx: typeof txMock) => unknown) => cb(txMock)),
@@ -52,6 +53,7 @@ beforeEach(() => {
   txMock.order.findFirst.mockResolvedValue(null)
   txMock.order.update.mockResolvedValue({ ...ORDER, status: 'AWAITING_PAYMENT', yooKassaPaymentId: 'pay-abc' })
   txMock.cartItem.deleteMany.mockResolvedValue({ count: 1 })
+  txMock.$executeRaw.mockResolvedValue(undefined)
   createPaymentMock.mockResolvedValue({
     id: 'pay-abc',
     status: 'pending',
@@ -190,5 +192,24 @@ describe('POST /api/checkout — rate limit', () => {
     checkRateLimitMock.mockResolvedValue({ allowed: false, retryAfterSeconds: 30 })
     const res = await POST(makeRequest())
     expect(res.status).toBe(429)
+  })
+})
+
+describe('POST /api/checkout — walk row locking (Bug 2 regression)', () => {
+  it('acquires a FOR UPDATE lock on walk rows before the capacity check', async () => {
+    await POST(makeRequest())
+    expect(txMock.$executeRaw).toHaveBeenCalled()
+  })
+
+  it('does not attempt to lock walk rows when the cart is empty', async () => {
+    txMock.cartItem.findMany.mockResolvedValue([])
+    await POST(makeRequest())
+    expect(txMock.$executeRaw).not.toHaveBeenCalled()
+  })
+
+  it('does not attempt to lock walk rows when all cart items are expired', async () => {
+    txMock.cartItem.findMany.mockResolvedValue([{ ...CART_ITEMS[0], reservedUntil: PAST }])
+    await POST(makeRequest())
+    expect(txMock.$executeRaw).not.toHaveBeenCalled()
   })
 })
