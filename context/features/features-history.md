@@ -182,6 +182,28 @@ Expanded Django admin to replace the previously removed Next.js admin panel. `Wa
 
 ---
 
+## Passwordless OTP
+
+**Branch:** passwordless-otp
+**Completed:** 2026-08-03
+
+### Goals
+
+- `USER` accounts log in with a 6-char email OTP (valid 5 min, 5-attempt cap) — no password required
+- `ADMIN`/`SUPERADMIN` keep password login at `/login/password`; `PASSWORD_MIN_LENGTH` raised to 16
+- All existing ADMIN/SUPERADMIN accounts flagged `passwordResetRequired = true` by migration — must reset before next login
+- Sessions live 2 weeks with sliding renewal
+- `middleware.ts` written so sliding renewal actually fires
+- `User.passwordHash` made nullable; USER rows nulled by migration; `LoginCode` model added
+- Registration drops the password field; password-reset flow silently skips USER accounts
+- Django admin immune to `TypeError` 500 when a USER email is entered
+
+### Summary
+
+Implemented passwordless OTP login for USER accounts alongside retained password login for ADMIN/SUPERADMIN at `/login/password`. `LoginCode` model stores SHA-256 hashed 6-char codes with 5-minute TTL and 5-attempt cap. `User.passwordHash` made nullable; existing USER hashes nulled by migration. All ADMIN/SUPERADMIN accounts flagged `passwordResetRequired = true`. Session sliding renewal wired correctly in middleware. Registration and password-reset flows updated to skip USER accounts.
+
+---
+
 ## YooKassa Payment Integration
 
 **Branch:** yookassa-payment

@@ -1,16 +1,9 @@
+'use server'
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { safeRedirect } from '@/utils/safeRedirect'
 import { AUTH_PAGE_PATHS, LOGIN_PATH, PROTECTED_PATH_PREFIXES } from '@/lib/constants'
 
-/**
- * Required, not optional: Auth.js can only re-issue a refreshed session cookie
- * from a context that can write `Set-Cookie`. Without this file the sliding
- * renewal configured in `lib/auth.ts` silently never fires.
- *
- * Also owns the Content-Security-Policy (moved here from the former proxy.ts —
- * Next.js allows only one of the two conventions to exist).
- */
 export default auth((req) => {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
   const isDev = process.env.NODE_ENV === 'development'
@@ -28,7 +21,25 @@ export default auth((req) => {
   ].join('; ')
 
   const { pathname } = req.nextUrl
-  const isLoggedIn = Boolean(req.auth)
+  const session = req.auth
+  const isLoggedIn = Boolean(session)
+  const role = session?.user?.role
+
+  // Admin route protection — role-gated, not just auth-gated
+  if (pathname.startsWith('/admin')) {
+    if (!isLoggedIn) {
+      const loginUrl = req.nextUrl.clone()
+      loginUrl.pathname = LOGIN_PATH
+      loginUrl.searchParams.set('returnUrl', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+    if (role === 'USER') {
+      return NextResponse.redirect(new URL('/', req.url))
+    }
+    if (role === 'ADMIN' && pathname.startsWith('/admin/users')) {
+      return NextResponse.redirect(new URL('/admin/walks?error=superadmin_required', req.url))
+    }
+  }
 
   const isProtected = PROTECTED_PATH_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
@@ -51,8 +62,6 @@ export default auth((req) => {
   requestHeaders.set('x-nonce', nonce)
   requestHeaders.set('content-security-policy', csp)
 
-  // Returning a response on every matched request is what lets the rotated
-  // session cookie reach the browser.
   const response = NextResponse.next({ request: { headers: requestHeaders } })
   response.headers.set('content-security-policy', csp)
 
@@ -60,9 +69,8 @@ export default auth((req) => {
 })
 
 export const config = {
-  // Everything except API routes, Next internals, static assets and /admin
-  // (rewritten to the Django admin).
-  matcher: ['/((?!api|_next/static|_next/image|_next/webpack-hmr|favicon\\.ico|admin).*)'],
-  // Auth.js here pulls in Prisma and bcrypt — neither runs on the edge runtime.
+  // Everything except API routes, Next internals, and static assets.
+  // /admin is now handled by this middleware (Django proxy removed).
+  matcher: ['/((?!api|_next/static|_next/image|_next/webpack-hmr|favicon\\.ico).*)'],
   runtime: 'nodejs',
 }

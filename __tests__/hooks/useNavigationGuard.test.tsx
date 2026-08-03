@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
-import { NavigationGuardProvider, useNavigationGuardContext } from '@/context/NavigationGuardContext'
+import { NavigationGuardProvider, useNavigationGuardContext } from '@/components/NavigationGuardContext'
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <NavigationGuardProvider>{children}</NavigationGuardProvider>

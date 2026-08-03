@@ -1,3 +1,3 @@
-export const Main = () => {
-  return <main></main>;
-};
+export const Main = ({ children }: { children?: React.ReactNode }) => {
+  return <main>{children}</main>
+}

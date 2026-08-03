@@ -1,20 +1,23 @@
-# Current Feature: passwordless-otp
+# Current Feature: nextjs-admin
 
 ## Status
 In Progress
 
 ## Goals
 
-- `USER` accounts log in with a 6-char email OTP (valid 5 min, 5-attempt cap) — no password required
-- `ADMIN`/`SUPERADMIN` keep password login at `/login/password`; `PASSWORD_MIN_LENGTH` raised to 16
-- All existing ADMIN/SUPERADMIN accounts flagged `passwordResetRequired = true` by migration — must reset before next login
-- Sessions live 2 weeks with sliding renewal (mirroring Django `SESSION_COOKIE_AGE` + `SESSION_SAVE_EVERY_REQUEST`)
-- `middleware.ts` written so sliding renewal actually fires (without it the config is silently inert)
-- `User.passwordHash` made nullable; USER rows nulled by migration; `LoginCode` model added
-- Registration drops the password field; password-reset flow silently skips USER accounts
-- Django admin immune to `TypeError` 500 when a USER email is entered (null-hash guard + role check reordered)
-- `pnpm test:run` green (195 → ~230+ tests), `pnpm build` zero TS errors
+- Schema migrations: `galleryUrl String?` added to `Walk`, `galleryUrls String[]` added to `Expedition`
+- Django proxy rewrite removed from `next.config.ts`; `/admin` exclusion removed from `middleware.ts`
+- Middleware role-gates `/admin/*`: unauthenticated → `/login?returnUrl=...`, USER → `/`, ADMIN on `/admin/users` → `/admin/walks?error=superadmin_required`
+- Admin shell: `app/admin/layout.tsx` with sidebar (Прогулки, Экспедиции, Команда, Заявки, Пользователи — last item SUPERADMIN-only), `app/admin/page.tsx` redirects to `/admin/walks`
+- Walks section: list (filters, pagination), create form, edit form, Server Actions with full lifecycle (publish/cancel/restore/delete) and ticket-aware delete guard
+- Expeditions section: list, create form (with repeatable days, multi-guide, gallery URLs up to 5), edit form, Server Actions with lifecycle and request-aware delete guard
+- Team section: list, create/edit forms, Server Actions with guide-assignment delete guard
+- Requests section: list (filters, detail modal), Server Action for NEW ↔ WAITLIST toggle
+- Users section (SUPERADMIN only): list (filters, role history modal), Server Actions for changeUserRole (transactional + RoleChangeLog), blockUser, unblockUser
+- `ensureUniqueSlug` utility in `lib/admin/slug.ts` with collision retry
+- Homepage "Админка" link updated from `/admin/` to `/admin/walks`
+- `pnpm test:run` green, `pnpm build` zero TS errors
 
 ## Notes
 
-**Spec:** context/specs/passwordless-otp/spec.md
+**Spec:** context/specs/nextjs-admin/spec.md

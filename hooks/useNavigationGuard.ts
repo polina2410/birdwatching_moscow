@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useNavigationGuardContext } from '@/context/NavigationGuardContext';
+import { useNavigationGuardContext } from '@/components/NavigationGuardContext';
 
 /**
  * Blocks navigation while `isActive` is true.
