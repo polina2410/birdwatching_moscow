@@ -40,4 +40,10 @@ describe('ensureUniqueSlug', () => {
     expect(slug).not.toContain(',')
     expect(slug).not.toContain('!')
   })
+
+  it('transliterates Cyrillic characters to Latin', async () => {
+    const checkExists = vi.fn().mockResolvedValue(false)
+    const slug = await ensureUniqueSlug('Прогулка в лесу', checkExists)
+    expect(slug).toBe('progulka-v-lesu')
+  })
 })

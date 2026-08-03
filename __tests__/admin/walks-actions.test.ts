@@ -15,6 +15,7 @@ vi.mock('@/lib/prisma', () => ({
 import {
   createWalk,
   updateWalk,
+  cancelWalk,
   publishWalk,
   deleteWalk,
   restoreWalk,
@@ -113,6 +114,55 @@ describe('deleteWalk', () => {
         data: expect.objectContaining({ status: 'DELETED' }),
       })
     )
+  })
+})
+
+describe('updateWalk — happy path', () => {
+  it('calls prisma.walk.update with the provided fields', async () => {
+    walkMock.update.mockResolvedValue({ id: 'walk-1' })
+    await updateWalk('walk-1', VALID_WALK_INPUT)
+    expect(walkMock.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'walk-1' } })
+    )
+  })
+})
+
+describe('createWalk — auto-slug', () => {
+  it('calls prisma.walk.create even when no slug is provided (auto-generates one)', async () => {
+    walkMock.findFirst.mockResolvedValue(null)
+    walkMock.create.mockResolvedValue({ id: 'walk-2' })
+    const { slug: _slug, ...inputWithoutSlug } = VALID_WALK_INPUT
+    await createWalk(inputWithoutSlug)
+    expect(walkMock.create).toHaveBeenCalled()
+  })
+})
+
+describe('cancelWalk', () => {
+  it('throws when walk status is not ACTIVE', async () => {
+    walkMock.findFirst.mockResolvedValue({ id: 'walk-1', status: 'DRAFT' })
+    await expect(cancelWalk('walk-1')).rejects.toThrow()
+  })
+
+  it('calls walk.update with CANCELLED when walk is ACTIVE', async () => {
+    walkMock.findFirst.mockResolvedValue({ id: 'walk-1', status: 'ACTIVE' })
+    walkMock.update.mockResolvedValue({ id: 'walk-1', status: 'CANCELLED' })
+    await cancelWalk('walk-1')
+    expect(walkMock.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'CANCELLED' }) })
+    )
+  })
+})
+
+describe('deleteWalk — active cart branch', () => {
+  it('throws with /бронирования/ when active cart items exist', async () => {
+    const futureTime = new Date(Date.now() + 30 * 60 * 1000)
+    walkMock.findFirst.mockResolvedValue({ id: 'walk-1', status: 'DRAFT' })
+    ticketMock.count.mockResolvedValue(0)
+    cartItemMock.aggregate.mockResolvedValue({
+      _count: { id: 1 },
+      _max: { reservedUntil: futureTime },
+    })
+    await expect(deleteWalk('walk-1')).rejects.toThrow(/бронирования/)
   })
 })
 

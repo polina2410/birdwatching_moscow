@@ -23,7 +23,7 @@ const { authMock, prismaMock } = vi.hoisted(() => {
 vi.mock('@/lib/auth', () => ({ auth: authMock }))
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 
-import { changeUserRole, blockUser } from '@/app/admin/users/_actions'
+import { changeUserRole, blockUser, unblockUser } from '@/app/admin/users/_actions'
 
 const SUPERADMIN_SESSION = { user: { id: 'su-1', role: 'SUPERADMIN' as const, name: 'SA' } }
 const ADMIN_SESSION = { user: { id: 'a-1', role: 'ADMIN' as const, name: 'A' } }
@@ -85,5 +85,24 @@ describe('blockUser', () => {
 
   it('throws when blocking self', async () => {
     await expect(blockUser('su-1')).rejects.toThrow()
+  })
+
+  it('calls user.update with blockedAt when target is not SUPERADMIN', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ id: 'target-1', role: 'USER', deletedAt: null, blockedAt: null })
+    prismaMock.user.update.mockResolvedValue({})
+    await blockUser('target-1')
+    expect(prismaMock.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ blockedAt: expect.any(Date) }) })
+    )
+  })
+})
+
+describe('unblockUser', () => {
+  it('calls user.update with blockedAt: null', async () => {
+    prismaMock.user.update.mockResolvedValue({})
+    await unblockUser('target-1')
+    expect(prismaMock.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { blockedAt: null } })
+    )
   })
 })

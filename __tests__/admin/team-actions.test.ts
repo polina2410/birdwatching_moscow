@@ -12,7 +12,7 @@ vi.mock('@/lib/prisma', () => ({
   prisma: { teamMember: teamMemberMock, walk: walkMock, expedition: expeditionMock },
 }))
 
-import { deleteTeamMember } from '@/app/admin/team/_actions'
+import { createTeamMember, updateTeamMember, deleteTeamMember } from '@/app/admin/team/_actions'
 
 const ADMIN_SESSION = { user: { id: 'u1', role: 'ADMIN' as const, name: 'Admin' } }
 
@@ -20,6 +20,31 @@ beforeEach(() => {
   vi.clearAllMocks()
   authMock.mockResolvedValue(ADMIN_SESSION)
   teamMemberMock.findFirst.mockResolvedValue({ id: 1, name: 'Guide' })
+})
+
+const VALID_MEMBER_INPUT = {
+  name: 'Guide Name',
+  photoUrl: 'https://example.com/photo.jpg',
+  profileLinks: [],
+  sortOrder: 1,
+}
+
+describe('createTeamMember', () => {
+  it('returns the new member id', async () => {
+    teamMemberMock.create.mockResolvedValue({ id: 5 })
+    const id = await createTeamMember(VALID_MEMBER_INPUT)
+    expect(id).toBe(5)
+  })
+})
+
+describe('updateTeamMember', () => {
+  it('calls prisma.teamMember.update with the provided data', async () => {
+    teamMemberMock.update.mockResolvedValue({ id: 1 })
+    await updateTeamMember(1, VALID_MEMBER_INPUT)
+    expect(teamMemberMock.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 1 } })
+    )
+  })
 })
 
 describe('deleteTeamMember', () => {
