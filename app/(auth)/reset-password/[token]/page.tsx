@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { useAuthForm } from '@/hooks/useAuthForm'
 import { AUTH_ERRORS } from '@/lib/auth-errors'
 import { AUTH_LABELS } from '@/lib/auth-labels'
+import { PASSWORD_MIN_LENGTH } from '@/lib/constants'
 
 const L = AUTH_LABELS.resetConfirm
 const C = AUTH_LABELS.common
@@ -33,7 +34,7 @@ export default function ConfirmResetPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token: params.token,
-          password: form.get('password'),
+          newPassword: form.get('password'),
         }),
       })
 
@@ -66,7 +67,7 @@ export default function ConfirmResetPage() {
             type="password"
             required
             autoComplete="new-password"
-            minLength={8}
+            minLength={PASSWORD_MIN_LENGTH}
           />
         </div>
 

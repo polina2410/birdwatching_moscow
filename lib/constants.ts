@@ -12,10 +12,28 @@ export const MAX_PROFILE_LINKS = 1
 export const MAX_EXPEDITION_DAYS = 30
 export const MAX_GUIDES_PER_EVENT = 5
 
-export const PASSWORD_MIN_LENGTH = 8
+// NOTE: applies to ADMIN/SUPERADMIN only — USER accounts are passwordless
+export const PASSWORD_MIN_LENGTH = 16
 export const BCRYPT_COST = 12
 // NOTE: 1 hour TTL for password reset tokens
 export const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000
+
+// Email one-time login code (USER accounts)
+export const LOGIN_CODE_LENGTH = 6
+// Ambiguity-free alphabet — no 0/O, no 1/I/L (31 symbols)
+export const LOGIN_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+export const LOGIN_CODE_TTL_MS = 5 * 60 * 1000
+export const LOGIN_CODE_MAX_ATTEMPTS = 5
+
+// Routes that require a session — extend as new protected pages land
+export const LOGIN_PATH = '/login'
+export const PROTECTED_PATH_PREFIXES = ['/profile'] as const
+// Pages a signed-in visitor has no business seeing
+export const AUTH_PAGE_PATHS = ['/login', '/login/password', '/register'] as const
+
+// Django's SESSION_COOKIE_AGE default (2 weeks) + SESSION_SAVE_EVERY_REQUEST semantics
+export const SESSION_MAX_AGE_SECONDS = 14 * 24 * 60 * 60 // 1209600
+export const SESSION_UPDATE_AGE_SECONDS = 24 * 60 * 60 // extend at most once per day
 
 // NOTE: matches the cart's existing 20-minute hold; the clock restarts at checkout
 export const PAYMENT_HOLD_MINUTES = 20

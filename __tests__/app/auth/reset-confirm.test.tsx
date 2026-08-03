@@ -43,7 +43,7 @@ describe('ConfirmResetPage — success', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token: 'valid-reset-token-123',
-          password: 'mySecretPassword99',
+          newPassword: 'mySecretPassword99',
         }),
       })
       expect(pushMock).toHaveBeenCalledWith('/login?passwordReset=1')

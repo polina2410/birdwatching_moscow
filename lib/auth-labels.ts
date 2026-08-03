@@ -23,6 +23,18 @@ export const AUTH_LABELS = {
     passwordReset: 'Пароль обновлён. Войдите в аккаунт.',
   },
 
+  loginCode: {
+    requestCode:       'Получить код',
+    requesting:        'Отправляем код…',
+    verify:            'Войти',
+    verifying:         'Проверяем код…',
+    codeField:         'Код из письма',
+    codeSentTo:        'Мы отправили код на',
+    passwordLoginLink: 'Вход для сотрудников',
+    resendCode:        'Отправить код снова',
+    changeEmail:       'Указать другой email',
+  },
+
   resetRequest: {
     title:        'Сброс пароля',
     description:  'Введите email и мы отправим вам ссылку для сброса пароля.',

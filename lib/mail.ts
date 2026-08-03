@@ -6,7 +6,7 @@ import {
   POSTBOX_DEFAULT_FROM_NAME,
 } from '@/lib/constants'
 
-export type MailKind = 'welcome' | 'password-reset' | 'order-paid'
+export type MailKind = 'welcome' | 'password-reset' | 'order-paid' | 'login-code'
 
 interface MailTemplate {
   subject: string
@@ -72,6 +72,23 @@ function orderPaidTemplate(data: Record<string, string>): MailTemplate {
   }
 }
 
+function loginCodeTemplate(data: Record<string, string>): MailTemplate {
+  const code = data.code ?? ''
+  return {
+    subject: 'Ваш код входа',
+    html: `
+      <div style="font-family: sans-serif; line-height: 1.5;">
+        <h1>Код для входа</h1>
+        <p>Введите этот код на странице входа:</p>
+        <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">${code}</p>
+        <p>Код действует 5 минут.</p>
+        <p>Если вы не запрашивали код, просто игнорируйте это письмо.</p>
+      </div>
+    `,
+    text: `Код для входа: ${code}\n\nКод действует 5 минут.\n\nЕсли вы не запрашивали код, просто игнорируйте это письмо.`,
+  }
+}
+
 function buildTemplate(kind: MailKind, data: Record<string, string>): MailTemplate {
   switch (kind) {
     case 'welcome':
@@ -80,6 +97,8 @@ function buildTemplate(kind: MailKind, data: Record<string, string>): MailTempla
       return passwordResetTemplate(data)
     case 'order-paid':
       return orderPaidTemplate(data)
+    case 'login-code':
+      return loginCodeTemplate(data)
   }
 }
 

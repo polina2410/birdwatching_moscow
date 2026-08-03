@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { registerSchema } from '@/lib/validation/auth'
 import { sendMail } from '@/lib/mail'
-import { BCRYPT_COST } from '@/lib/constants'
 import { validateRequest } from '@/lib/api/validate'
 
 export async function POST(req: NextRequest) {
@@ -13,7 +11,7 @@ export async function POST(req: NextRequest) {
     return result.response
   }
 
-  const { email, password, name } = result.data
+  const { email, name } = result.data
 
   const existing = await prisma.user.findFirst({
     where: { email, deletedAt: null },
@@ -26,13 +24,12 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const passwordHash = await bcrypt.hash(password, BCRYPT_COST)
-
+  // Passwordless: regular accounts sign in with an emailed one-time code
   await prisma.user.create({
     data: {
       email,
       name,
-      passwordHash,
+      passwordHash: null,
       role: 'USER',
     },
   })

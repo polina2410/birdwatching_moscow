@@ -43,9 +43,12 @@ model User {
   id           String    @id @default(uuid())
   // NOTE: NOT @unique — uniqueness is a partial index WHERE "deletedAt" IS NULL, added via raw SQL in migration
   email        String    @db.VarChar(254)
-  passwordHash String
+  // NOTE: nullable — USER accounts are passwordless and sign in with an emailed one-time code
+  passwordHash String?
   name         String    @db.VarChar(50)
   role         Role      @default(USER)
+  // NOTE: forces ADMIN/SUPERADMIN password rotation after PASSWORD_MIN_LENGTH was raised to 16
+  passwordResetRequired Boolean @default(false)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
@@ -211,6 +214,20 @@ model PasswordResetToken {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+}
+
+model LoginCode {
+  id String @id @default(uuid())
+  // NOTE: keyed by email, not userId — the request endpoint does identical work whether or not the account exists
+  email String @db.VarChar(254)
+  // NOTE: deliberately NOT @unique — the 6-char space makes collisions realistic; always look up email + codeHash together
+  codeHash  String    @db.VarChar(64)
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  @@index([email])
 }
 
 model Request {

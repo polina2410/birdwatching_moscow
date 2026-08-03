@@ -27,7 +27,8 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  if (user) {
+  // USER accounts have no password to reset — they sign in with an emailed code
+  if (user && user.role !== 'USER') {
     await prisma.passwordResetToken.deleteMany({
       where: {
         userId: user.id,
