@@ -13,6 +13,7 @@ const { sendMailMock, prismaMock } = vi.hoisted(() => {
     orderItem: {
       findMany: vi.fn(),
     },
+    $executeRaw: vi.fn(),
   }
   return {
     sendMailMock: vi.fn(),
@@ -35,6 +36,7 @@ const tx = ((prismaMock as unknown as { _tx: unknown })._tx) as {
   order: { findUnique: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> }
   ticket: { createMany: ReturnType<typeof vi.fn>; count: ReturnType<typeof vi.fn> }
   orderItem: { findMany: ReturnType<typeof vi.fn> }
+  $executeRaw: ReturnType<typeof vi.fn>
 }
 
 const baseOrder = {
@@ -59,6 +61,7 @@ beforeEach(() => {
   tx.ticket.createMany.mockResolvedValue({ count: 2 })
   tx.ticket.count.mockResolvedValue(0)
   tx.orderItem.findMany.mockResolvedValue(baseItems)
+  tx.$executeRaw.mockResolvedValue(undefined)
   sendMailMock.mockResolvedValue(undefined)
   prismaMock.user.findUnique.mockResolvedValue({ email: 'buyer@example.com' })
 })
@@ -191,5 +194,47 @@ describe('applyPaymentResult — unknown payment', () => {
     await expect(
       applyPaymentResult({ paymentId: 'unknown-pay', status: 'succeeded', amountKopecks: 150000 })
     ).resolves.not.toThrow()
+  })
+})
+
+describe('applyPaymentResult — concurrent webhook idempotency (Bug 1 regression)', () => {
+  it('acquires a FOR UPDATE lock on the order row before reading status', async () => {
+    await applyPaymentResult({ paymentId: 'pay-abc', status: 'succeeded', amountKopecks: 150000 })
+    expect(tx.$executeRaw).toHaveBeenCalled()
+  })
+
+  it('does not create tickets when re-read after lock reveals PAID', async () => {
+    // Simulates the second concurrent webhook: findOrder reads AWAITING_PAYMENT,
+    // but by the time the FOR UPDATE lock is acquired the first webhook has
+    // already committed → re-read returns PAID.
+    tx.order.findUnique
+      .mockResolvedValueOnce(baseOrder)              // findOrder: found by paymentId
+      .mockResolvedValueOnce({ status: 'PAID' })     // re-read after lock
+
+    await applyPaymentResult({ paymentId: 'pay-abc', status: 'succeeded', amountKopecks: 150000 })
+
+    expect(tx.ticket.createMany).not.toHaveBeenCalled()
+  })
+
+  it('does not send confirmation mail when re-read after lock reveals PAID', async () => {
+    tx.order.findUnique
+      .mockResolvedValueOnce(baseOrder)
+      .mockResolvedValueOnce({ status: 'PAID' })
+
+    await applyPaymentResult({ paymentId: 'pay-abc', status: 'succeeded', amountKopecks: 150000 })
+
+    expect(sendMailMock).not.toHaveBeenCalled()
+  })
+
+  it('does not update order status when re-read after lock reveals PAID', async () => {
+    tx.order.findUnique
+      .mockResolvedValueOnce(baseOrder)
+      .mockResolvedValueOnce({ status: 'PAID' })
+
+    await applyPaymentResult({ paymentId: 'pay-abc', status: 'succeeded', amountKopecks: 150000 })
+
+    expect(tx.order.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'PAID' }) })
+    )
   })
 })

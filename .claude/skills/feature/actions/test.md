@@ -14,4 +14,4 @@
     ```
    If the coverage agent found no gaps and no tests were written, skip this step.
 
-**Next step:** optionally run `/feature explain` to document what changed, then run `/feature complete` to create the PR.
+**Next step:** optionally run `/feature explain` to see what changed, then run `/feature complete` to create the PR.

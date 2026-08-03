@@ -11,8 +11,14 @@ export async function checkRateLimit(key: string): Promise<{
 
   const pipeline = redis.pipeline();
   pipeline.incr(redisKey);
-  pipeline.expire(redisKey, WINDOW);
-  const [current] = await pipeline.exec<[number, number]>();
+  const [current] = await pipeline.exec<[number]>();
+
+  // Set the expiry only on the first request so the window is fixed from that
+  // point — not sliding. Calling expire on every request (including blocked ones)
+  // would let a retrying client extend the window indefinitely.
+  if (current === 1) {
+    await redis.expire(redisKey, WINDOW);
+  }
 
   if (current > MAX_REQUESTS) {
     const ttl = await redis.ttl(redisKey);
