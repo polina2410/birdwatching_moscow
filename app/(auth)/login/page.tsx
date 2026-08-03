@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -27,6 +27,11 @@ function LoginCodeForm() {
   const { error, setError, loading, run } = useAuthForm()
   const [step, setStep] = useState<Step>('email')
   const [email, setEmail] = useState('')
+  const codeInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (step === 'code') codeInputRef.current?.focus()
+  }, [step])
 
   const isRegistered = searchParams.get('registered') === '1'
 
@@ -93,21 +98,24 @@ function LoginCodeForm() {
         </>
       ) : (
         <>
-          <p>
+          <p id="code-sent-to">
             {LC.codeSentTo} {maskEmail(email)}
           </p>
           <form onSubmit={handleCodeSubmit}>
             <div>
               <label htmlFor="code">{LC.codeField}</label>
               <input
+                ref={codeInputRef}
                 id="code"
                 name="code"
                 type="text"
                 required
+                maxLength={6}
                 inputMode="text"
                 autoComplete="one-time-code"
                 autoCapitalize="characters"
                 spellCheck={false}
+                aria-describedby="code-sent-to"
               />
             </div>
             <button type="submit" disabled={loading}>

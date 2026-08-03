@@ -15,6 +15,7 @@ export const AUTH_LABELS = {
 
   login: {
     title:        'Вход',
+    staffTitle:   'Вход для сотрудников',
     submit:       'Войти',
     submitting:   'Входим…',
     registerLink: 'Создать аккаунт',

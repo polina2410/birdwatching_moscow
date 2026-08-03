@@ -49,7 +49,7 @@ function LoginPasswordForm() {
 
   return (
     <main>
-      <h1>{L.title}</h1>
+      <h1>{L.staffTitle}</h1>
       {isRegistered && <p>{L.registered}</p>}
       {isPasswordReset && <p>{L.passwordReset}</p>}
 
