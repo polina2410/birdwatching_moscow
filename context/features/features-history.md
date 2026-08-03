@@ -182,6 +182,25 @@ Expanded Django admin to replace the previously removed Next.js admin panel. `Wa
 
 ---
 
+## Next.js Admin Panel
+
+**Branch:** nextjs-admin
+**Completed:** 2026-08-03
+
+### Goals
+
+- Replace Django admin with a custom Next.js admin panel (Walks, Expeditions, Team, Requests, Users)
+- Remove all Django infrastructure from the repository
+- Middleware role-gates for `/admin/*`: unauthenticated → login, USER → home, ADMIN blocked from `/admin/users`
+- Server Actions with full CRUD lifecycle, slug auto-generation (Cyrillic transliteration), gallery fields
+- `galleryUrl` on Walk, `galleryUrls[]` on Expedition + migration
+
+### Summary
+
+Replaced the Django admin process with a Next.js App Router admin panel. All five sections (Walks, Expeditions, Team, Requests, Users) implemented as Server Components with Server Actions. Role-gated middleware handles three redirect scenarios. Slug utility transliterates Cyrillic and retries up to 5 times on collision. Walk gallery is a single optional URL; Expedition gallery is an array of up to 5 URLs. Users section is SUPERADMIN-only with transactional role changes logged to RoleChangeLog. 348 tests across 42 files; zero TypeScript build errors.
+
+---
+
 ## Passwordless OTP
 
 **Branch:** passwordless-otp
