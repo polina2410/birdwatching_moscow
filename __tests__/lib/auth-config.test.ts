@@ -10,7 +10,7 @@ vi.mock('bcryptjs', () => ({ default: { compare: vi.fn(), hash: vi.fn() } }))
 import { SESSION_MAX_AGE_SECONDS, SESSION_UPDATE_AGE_SECONDS } from '@/lib/constants'
 import { authOptions } from '@/lib/auth'
 
-describe('Session constants (Django SESSION_COOKIE_AGE semantics)', () => {
+describe('Session constants', () => {
   it('SESSION_MAX_AGE_SECONDS is 1209600 (14 days)', () => {
     expect(SESSION_MAX_AGE_SECONDS).toBe(1209600)
   })

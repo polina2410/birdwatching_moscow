@@ -31,8 +31,7 @@ export const PROTECTED_PATH_PREFIXES = ['/profile'] as const
 // Pages a signed-in visitor has no business seeing
 export const AUTH_PAGE_PATHS = ['/login', '/login/password', '/register'] as const
 
-// Django's SESSION_COOKIE_AGE default (2 weeks) + SESSION_SAVE_EVERY_REQUEST semantics
-export const SESSION_MAX_AGE_SECONDS = 14 * 24 * 60 * 60 // 1209600
+export const SESSION_MAX_AGE_SECONDS = 14 * 24 * 60 * 60 // 1209600 — 2 weeks
 export const SESSION_UPDATE_AGE_SECONDS = 24 * 60 * 60 // extend at most once per day
 
 // NOTE: matches the cart's existing 20-minute hold; the clock restarts at checkout

@@ -32,8 +32,7 @@ async function withSigninErrors(
 // auth.config.ts. `NextAuth()` still type-checks the argument.
 export const authOptions = {
   ...authConfig,
-  // Django's SESSION_COOKIE_AGE (2 weeks); `updateAge` gives the sliding
-  // renewal of SESSION_SAVE_EVERY_REQUEST. Requires middleware.ts to fire.
+  // `updateAge` gives sliding renewal — middleware.ts must fire on every request.
   session: {
     strategy: 'jwt' as const,
     maxAge: SESSION_MAX_AGE_SECONDS,
