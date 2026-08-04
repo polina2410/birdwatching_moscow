@@ -70,7 +70,6 @@ export default auth((req) => {
 
 export const config = {
   // Everything except API routes, Next internals, and static assets.
-  // /admin is now handled by this middleware (Django proxy removed).
   matcher: ['/((?!api|_next/static|_next/image|_next/webpack-hmr|favicon\\.ico).*)'],
   runtime: 'nodejs',
 }
