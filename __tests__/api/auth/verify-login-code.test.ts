@@ -27,7 +27,7 @@ vi.mock('@/lib/login-code', () => ({ hashLoginCode: hashLoginCodeMock }))
 vi.mock('@/lib/rateLimit', () => ({ checkRateLimit: checkRateLimitMock }))
 
 import { POST } from '@/app/api/auth/verify-login-code/route'
-import { LOGIN_CODE_MAX_ATTEMPTS } from '@/lib/constants'
+import { LOGIN_CODE_MAX_ATTEMPTS, HTTP_METHOD, JSON_HEADERS, HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_TOO_MANY_REQUESTS } from '@/lib/constants'
 
 const USER = {
   id: 'u1',
@@ -55,8 +55,8 @@ const ACTIVE_CODE = {
 
 function makeReq(body: object) {
   return new Request('http://localhost/api/auth/verify-login-code', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: HTTP_METHOD.POST,
+    headers: JSON_HEADERS,
     body: JSON.stringify(body),
   })
 }
@@ -184,7 +184,7 @@ describe('POST /api/auth/verify-login-code — ADMIN invalid code', () => {
 
   it('returns 401', async () => {
     const res = await POST(makeReq({ email: ADMIN.email, code: 'WRONG1' }))
-    expect(res.status).toBe(401)
+    expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED)
   })
 
   it('increments attempts on the active code', async () => {
@@ -201,13 +201,23 @@ describe('POST /api/auth/verify-login-code — ADMIN invalid code', () => {
     expect(prismaMock.adminLoginChallenge.create).not.toHaveBeenCalled()
   })
 
+  it('returns 401 and does not increment when there is no active code', async () => {
+    prismaMock.loginCode.findFirst.mockReset()
+    prismaMock.loginCode.findFirst
+      .mockResolvedValueOnce(null)  // no match
+      .mockResolvedValueOnce(null)  // no active code to increment
+    const res = await POST(makeReq({ email: ADMIN.email, code: 'WRONG1' }))
+    expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED)
+    expect(prismaMock.loginCode.update).not.toHaveBeenCalled()
+  })
+
   it('returns 401 when code is at attempt limit', async () => {
     prismaMock.loginCode.findFirst.mockReset()
     prismaMock.loginCode.findFirst
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ ...ACTIVE_CODE, attempts: LOGIN_CODE_MAX_ATTEMPTS })
     const res = await POST(makeReq({ email: ADMIN.email, code: 'ABCD2F' }))
-    expect(res.status).toBe(401)
+    expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED)
   })
 })
 
@@ -218,7 +228,7 @@ describe('POST /api/auth/verify-login-code — rate limiting', () => {
     checkRateLimitMock.mockResolvedValue({ allowed: false, retryAfterSeconds: 30 })
     prismaMock.user.findFirst.mockResolvedValue(null)
     const res = await POST(makeReq({ email: ADMIN.email, code: 'ABCD2F' }))
-    expect(res.status).toBe(429)
+    expect(res.status).toBe(HTTP_STATUS_TOO_MANY_REQUESTS)
     expect(res.headers.get('Retry-After')).toBe('30')
   })
 })
@@ -229,14 +239,14 @@ describe('POST /api/auth/verify-login-code — validation', () => {
   beforeEach(() => prismaMock.user.findFirst.mockResolvedValue(null))
 
   it('returns 400 for missing email', async () => {
-    expect((await POST(makeReq({ code: 'ABCD2F' }))).status).toBe(400)
+    expect((await POST(makeReq({ code: 'ABCD2F' }))).status).toBe(HTTP_STATUS_BAD_REQUEST)
   })
 
   it('returns 400 for missing code', async () => {
-    expect((await POST(makeReq({ email: ADMIN.email }))).status).toBe(400)
+    expect((await POST(makeReq({ email: ADMIN.email }))).status).toBe(HTTP_STATUS_BAD_REQUEST)
   })
 
   it('returns 400 for invalid email format', async () => {
-    expect((await POST(makeReq({ email: 'not-an-email', code: 'ABCD2F' }))).status).toBe(400)
+    expect((await POST(makeReq({ email: 'not-an-email', code: 'ABCD2F' }))).status).toBe(HTTP_STATUS_BAD_REQUEST)
   })
 })

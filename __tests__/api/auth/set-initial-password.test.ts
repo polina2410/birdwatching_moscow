@@ -26,7 +26,7 @@ vi.mock('@/lib/auth/challenge', () => ({
 vi.mock('@/lib/rateLimit', () => ({ checkRateLimit: checkRateLimitMock }))
 
 import { POST } from '@/app/api/auth/set-initial-password/route'
-import { PASSWORD_MIN_LENGTH } from '@/lib/constants'
+import { PASSWORD_MIN_LENGTH, HTTP_METHOD, JSON_HEADERS, HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_TOO_MANY_REQUESTS } from '@/lib/constants'
 
 const VALID_CHALLENGE = {
   id: 'ch1',
@@ -50,8 +50,8 @@ const VALID_PASSWORD = 'a'.repeat(PASSWORD_MIN_LENGTH)
 
 function makeReq(body: object) {
   return new Request('http://localhost/api/auth/set-initial-password', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: HTTP_METHOD.POST,
+    headers: JSON_HEADERS,
     body: JSON.stringify(body),
   })
 }
@@ -120,7 +120,29 @@ describe('POST /api/auth/set-initial-password — invalid challenge', () => {
   it('returns 401 when challenge row is not found', async () => {
     prismaMock.adminLoginChallenge.findFirst.mockResolvedValue(null)
     const res = await POST(makeReq({ email: 'admin@test.com', challengeToken: 'bad', password: VALID_PASSWORD }))
-    expect(res.status).toBe(401)
+    expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED)
+    expect(prismaMock.user.update).not.toHaveBeenCalled()
+  })
+})
+
+// ── User not found ────────────────────────────────────────────────────────────
+
+describe('POST /api/auth/set-initial-password — user not found', () => {
+  it('returns 400 and does not update user when user row is not found', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(null)
+    const res = await POST(makeReq({ email: 'admin@test.com', challengeToken: 'tok', password: VALID_PASSWORD }))
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
+    expect(prismaMock.user.update).not.toHaveBeenCalled()
+  })
+})
+
+// ── Wrong role ────────────────────────────────────────────────────────────────
+
+describe('POST /api/auth/set-initial-password — USER role not eligible', () => {
+  it('returns 400 and does not update user when role is USER', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ ...ADMIN_NO_PASSWORD, role: 'USER' })
+    const res = await POST(makeReq({ email: 'admin@test.com', challengeToken: 'tok', password: VALID_PASSWORD }))
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
     expect(prismaMock.user.update).not.toHaveBeenCalled()
   })
 })
@@ -131,7 +153,7 @@ describe('POST /api/auth/set-initial-password — user already has a password', 
   it('returns 400 and does not overwrite the existing hash', async () => {
     prismaMock.user.findFirst.mockResolvedValue({ ...ADMIN_NO_PASSWORD, passwordHash: '$2b$12$existing' })
     const res = await POST(makeReq({ email: 'admin@test.com', challengeToken: 'tok', password: VALID_PASSWORD }))
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
     expect(prismaMock.user.update).not.toHaveBeenCalled()
   })
 })
@@ -141,22 +163,22 @@ describe('POST /api/auth/set-initial-password — user already has a password', 
 describe('POST /api/auth/set-initial-password — validation', () => {
   it('returns 400 for missing email', async () => {
     const res = await POST(makeReq({ challengeToken: 'tok', password: VALID_PASSWORD }))
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
   })
 
   it('returns 400 for missing challengeToken', async () => {
     const res = await POST(makeReq({ email: 'admin@test.com', password: VALID_PASSWORD }))
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
   })
 
   it(`returns 400 for password shorter than ${PASSWORD_MIN_LENGTH} chars`, async () => {
     const res = await POST(makeReq({ email: 'admin@test.com', challengeToken: 'tok', password: 'tooshort' }))
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
   })
 
   it('returns 400 for invalid email format', async () => {
     const res = await POST(makeReq({ email: 'not-an-email', challengeToken: 'tok', password: VALID_PASSWORD }))
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
   })
 })
 
@@ -166,7 +188,7 @@ describe('POST /api/auth/set-initial-password — rate limiting', () => {
   it('returns 429 with Retry-After when limit exceeded', async () => {
     checkRateLimitMock.mockResolvedValue({ allowed: false, retryAfterSeconds: 60 })
     const res = await POST(makeReq({ email: 'admin@test.com', challengeToken: 'tok', password: VALID_PASSWORD }))
-    expect(res.status).toBe(429)
+    expect(res.status).toBe(HTTP_STATUS_TOO_MANY_REQUESTS)
     expect(res.headers.get('Retry-After')).toBe('60')
   })
 })
