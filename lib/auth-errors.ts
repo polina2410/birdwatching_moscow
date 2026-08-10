@@ -4,6 +4,7 @@ export const AUTH_ERRORS = {
   emailTaken:     'Этот email уже зарегистрирован.',
   wrongCredentials: 'Неверный email или пароль.',
   accountBlocked: 'Ваш аккаунт заблокирован. Обратитесь к администратору.',
-  invalidCode:    'Неверный или устаревший код.',
+  invalidCode:      'Неверный или устаревший код.',
+  invalidChallenge: 'Сессия истекла. Начните вход заново.',
   passwordResetRequired: 'Пароль устарел. Запросите сброс пароля.',
 } as const;

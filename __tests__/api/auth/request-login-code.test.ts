@@ -99,17 +99,32 @@ describe('POST /api/auth/request-login-code — safe response (no action taken)'
   it('unknown email → 200, no mail, no row', () =>
     expectSafeNoAction({ email: 'nobody@test.com' }, null))
 
-  it('ADMIN email → 200, no mail, no row', () =>
-    expectSafeNoAction({ email: 'admin@test.com' }, { ...USER, role: 'ADMIN' }))
-
-  it('SUPERADMIN email → 200, no mail, no row', () =>
-    expectSafeNoAction({ email: 'super@test.com' }, { ...USER, role: 'SUPERADMIN' }))
-
   it('blocked USER → 200, no mail, no row', () =>
     expectSafeNoAction({ email: USER.email }, { ...USER, blockedAt: new Date() }))
 
+  it('blocked ADMIN → 200, no mail, no row', () =>
+    expectSafeNoAction({ email: 'admin@test.com' }, { ...USER, role: 'ADMIN', blockedAt: new Date() }))
+
   it('soft-deleted USER → 200, no mail, no row', () =>
     expectSafeNoAction({ email: USER.email }, null)) // findFirst with deletedAt:null returns null
+})
+
+describe('POST /api/auth/request-login-code — ADMIN/SUPERADMIN receive codes', () => {
+  it('ADMIN email → 200, sends mail, creates row', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ ...USER, role: 'ADMIN', email: 'admin@test.com' })
+    const res = await POST(makeReq({ email: 'admin@test.com' }))
+    expect(res.status).toBe(200)
+    expect(sendMailMock).toHaveBeenCalledTimes(1)
+    expect(prismaMock.loginCode.create).toHaveBeenCalledTimes(1)
+  })
+
+  it('SUPERADMIN email → 200, sends mail, creates row', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ ...USER, role: 'SUPERADMIN', email: 'super@test.com' })
+    const res = await POST(makeReq({ email: 'super@test.com' }))
+    expect(res.status).toBe(200)
+    expect(sendMailMock).toHaveBeenCalledTimes(1)
+    expect(prismaMock.loginCode.create).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('POST /api/auth/request-login-code — rate limiting', () => {
