@@ -40,6 +40,15 @@ export const AUTH_LABELS = {
     submitting: 'Входим…',
   },
 
+  adminSetPassword: {
+    title:        'Создайте пароль',
+    passwordField: 'Новый пароль',
+    confirmField:  'Подтвердите пароль',
+    submit:        'Сохранить и войти',
+    submitting:    'Сохраняем…',
+    mismatch:      'Пароли не совпадают',
+  },
+
   resetRequest: {
     title:        'Сброс пароля',
     description:  'Введите email и мы отправим вам ссылку для сброса пароля.',

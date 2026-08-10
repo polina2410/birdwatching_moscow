@@ -22,6 +22,7 @@ const L = AUTH_LABELS.login
 const C = AUTH_LABELS.common
 const LC = AUTH_LABELS.loginCode
 const LA = AUTH_LABELS.adminPassword
+const ASP = AUTH_LABELS.adminSetPassword
 
 // Default fetch mock: request-login-code (step 1) passes through ok;
 // verify-login-code (step 2) returns { next: 'session' } for the USER path.
@@ -38,6 +39,24 @@ function stubFetchForAdmin(challengeToken = 'tok123') {
   vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
     if (String(url).includes('verify-login-code')) {
       return Promise.resolve({ ok: true, json: async () => ({ next: 'password', challengeToken }) })
+    }
+    return Promise.resolve({ ok: true })
+  }))
+}
+
+function stubFetchForAdminNoPassword(verifyChallengeToken = 'tok123', newChallengeToken = 'newtoken456') {
+  vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+    if (String(url).includes('verify-login-code')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ next: 'set-password', challengeToken: verifyChallengeToken }),
+      })
+    }
+    if (String(url).includes('set-initial-password')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ challengeToken: newChallengeToken }),
+      })
     }
     return Promise.resolve({ ok: true })
   }))
@@ -124,7 +143,7 @@ describe('LoginPage — step 2 (code entry)', () => {
 // ── Step 2 → password step (admin path) ────────────────────────────────────
 
 describe('LoginPage — admin path: verify returns { next:"password" }', () => {
-  beforeEach(stubFetchForAdmin)
+  beforeEach(() => stubFetchForAdmin())
 
   it('shows password field and hides code field', async () => {
     await submitEmail('admin@test.com')
@@ -202,6 +221,105 @@ describe('LoginPage — step 3 (admin password)', () => {
     await advanceToPasswordStep()
     fireEvent.change(screen.getByLabelText(C.passwordField), { target: { value: 'wrong' } })
     fireEvent.submit(screen.getByRole('button', { name: LA.submit }))
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(AUTH_ERRORS.wrongCredentials)
+    )
+  })
+})
+
+// ── Step 2 → set-password step (admin first login) ─────────────────────────
+
+describe('LoginPage — admin first login: verify returns { next:"set-password" }', () => {
+  beforeEach(() => stubFetchForAdminNoPassword())
+
+  it('shows set-password step and hides code field', async () => {
+    await submitEmail('admin@test.com')
+    fireEvent.change(screen.getByLabelText(LC.codeField), { target: { value: 'ABCD2F' } })
+    fireEvent.submit(screen.getByRole('button', { name: LC.verify }))
+    await waitFor(() => screen.getByLabelText(ASP.passwordField))
+    expect(screen.queryByLabelText(LC.codeField)).toBeNull()
+  })
+
+  it('also shows a confirm-password field', async () => {
+    await submitEmail('admin@test.com')
+    fireEvent.change(screen.getByLabelText(LC.codeField), { target: { value: 'ABCD2F' } })
+    fireEvent.submit(screen.getByRole('button', { name: LC.verify }))
+    await waitFor(() => screen.getByLabelText(ASP.confirmField))
+  })
+
+  it('does NOT call signIn when advancing to set-password step', async () => {
+    await submitEmail('admin@test.com')
+    fireEvent.change(screen.getByLabelText(LC.codeField), { target: { value: 'ABCD2F' } })
+    fireEvent.submit(screen.getByRole('button', { name: LC.verify }))
+    await waitFor(() => screen.getByLabelText(ASP.passwordField))
+    expect(signInMock).not.toHaveBeenCalled()
+  })
+})
+
+// ── Step set-password: submit (admin first login) ───────────────────────────
+
+async function advanceToSetPasswordStep(email = 'admin@test.com') {
+  stubFetchForAdminNoPassword()
+  await submitEmail(email)
+  fireEvent.change(screen.getByLabelText(LC.codeField), { target: { value: 'ABCD2F' } })
+  fireEvent.submit(screen.getByRole('button', { name: LC.verify }))
+  await waitFor(() => screen.getByLabelText(ASP.passwordField))
+}
+
+describe('LoginPage — set-password step (admin first login)', () => {
+  it('shows mismatch error when passwords do not match', async () => {
+    await advanceToSetPasswordStep()
+    fireEvent.change(screen.getByLabelText(ASP.passwordField), { target: { value: 'aaaaaaaaaaaaaaaa' } })
+    fireEvent.change(screen.getByLabelText(ASP.confirmField), { target: { value: 'bbbbbbbbbbbbbbbb' } })
+    fireEvent.submit(screen.getByRole('button', { name: ASP.submit }))
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(ASP.mismatch)
+    )
+    expect(signInMock).not.toHaveBeenCalled()
+  })
+
+  it('calls set-initial-password then signIn("admin-2fa") with the returned challengeToken', async () => {
+    signInMock.mockResolvedValue({ error: null, code: null })
+    await advanceToSetPasswordStep()
+    fireEvent.change(screen.getByLabelText(ASP.passwordField), { target: { value: 'aaaaaaaaaaaaaaaa' } })
+    fireEvent.change(screen.getByLabelText(ASP.confirmField), { target: { value: 'aaaaaaaaaaaaaaaa' } })
+    fireEvent.submit(screen.getByRole('button', { name: ASP.submit }))
+    await waitFor(() =>
+      expect(signInMock).toHaveBeenCalledWith('admin-2fa', {
+        email: 'admin@test.com',
+        challengeToken: 'newtoken456',
+        password: 'aaaaaaaaaaaaaaaa',
+        redirect: false,
+      })
+    )
+  })
+
+  it('redirects to "/" on success', async () => {
+    signInMock.mockResolvedValue({ error: null, code: null })
+    await advanceToSetPasswordStep()
+    fireEvent.change(screen.getByLabelText(ASP.passwordField), { target: { value: 'aaaaaaaaaaaaaaaa' } })
+    fireEvent.change(screen.getByLabelText(ASP.confirmField), { target: { value: 'aaaaaaaaaaaaaaaa' } })
+    fireEvent.submit(screen.getByRole('button', { name: ASP.submit }))
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/'))
+  })
+
+  it('account_blocked → AUTH_ERRORS.accountBlocked', async () => {
+    signInMock.mockResolvedValue({ error: 'AccessDenied', code: 'account_blocked' })
+    await advanceToSetPasswordStep()
+    fireEvent.change(screen.getByLabelText(ASP.passwordField), { target: { value: 'aaaaaaaaaaaaaaaa' } })
+    fireEvent.change(screen.getByLabelText(ASP.confirmField), { target: { value: 'aaaaaaaaaaaaaaaa' } })
+    fireEvent.submit(screen.getByRole('button', { name: ASP.submit }))
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(AUTH_ERRORS.accountBlocked)
+    )
+  })
+
+  it('signIn error → AUTH_ERRORS.wrongCredentials', async () => {
+    signInMock.mockResolvedValue({ error: 'CredentialsSignin', code: null })
+    await advanceToSetPasswordStep()
+    fireEvent.change(screen.getByLabelText(ASP.passwordField), { target: { value: 'aaaaaaaaaaaaaaaa' } })
+    fireEvent.change(screen.getByLabelText(ASP.confirmField), { target: { value: 'aaaaaaaaaaaaaaaa' } })
+    fireEvent.submit(screen.getByRole('button', { name: ASP.submit }))
     await waitFor(() =>
       expect(screen.getByRole('alert')).toHaveTextContent(AUTH_ERRORS.wrongCredentials)
     )

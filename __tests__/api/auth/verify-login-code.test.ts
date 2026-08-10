@@ -140,6 +140,37 @@ describe('POST /api/auth/verify-login-code — ADMIN valid code', () => {
   })
 })
 
+// ── ADMIN with no password → { next: 'set-password', challengeToken } ────────
+
+describe('POST /api/auth/verify-login-code — ADMIN no passwordHash (first login)', () => {
+  beforeEach(() => {
+    prismaMock.user.findFirst.mockResolvedValue({ ...ADMIN, passwordHash: null })
+    prismaMock.loginCode.findFirst.mockResolvedValue(ACTIVE_CODE)
+  })
+
+  it('returns 200 { next: "set-password", challengeToken }', async () => {
+    const res = await POST(makeReq({ email: ADMIN.email, code: 'ABCD2F' }))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.next).toBe('set-password')
+    expect(body.challengeToken).toBe('rawtoken123')
+  })
+
+  it('SUPERADMIN with no password also gets { next: "set-password" }', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ ...ADMIN, role: 'SUPERADMIN', passwordHash: null })
+    const res = await POST(makeReq({ email: ADMIN.email, code: 'ABCD2F' }))
+    expect((await res.json()).next).toBe('set-password')
+  })
+
+  it('marks code used and creates a challenge row (same as password path)', async () => {
+    await POST(makeReq({ email: ADMIN.email, code: 'ABCD2F' }))
+    expect(prismaMock.loginCode.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ usedAt: expect.any(Date) }) })
+    )
+    expect(prismaMock.adminLoginChallenge.create).toHaveBeenCalledTimes(1)
+  })
+})
+
 // ── ADMIN with invalid code → 401 ──────────────────────────────────────────
 
 describe('POST /api/auth/verify-login-code — ADMIN invalid code', () => {
