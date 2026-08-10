@@ -223,6 +223,24 @@ Implemented passwordless OTP login for USER accounts alongside retained password
 
 ---
 
+## Admin First-Login Password
+
+**Branch:** verify_login
+**Completed:** 2026-08-10
+
+### Goals
+
+- `POST /api/auth/verify-login-code` returns `{ next:'set-password', challengeToken }` when ADMIN/SUPERADMIN has `passwordHash === null`; returns `{ next:'password', challengeToken }` when passwordHash is set
+- `POST /api/auth/set-initial-password`: valid challenge + password → saves hash, marks challenge used, issues new challenge, returns `{ challengeToken }`; invalid challenge → 401; user already has password → 400; short password → 400; rate limit → 429
+- Login page `set-password` step: shows after `{ next:'set-password' }`, has password + confirm fields, validates match client-side, calls `set-initial-password` then `signIn('admin-2fa')` with returned token
+- `pnpm test:run`, `pnpm lint`, `pnpm build` all pass
+
+### Summary
+
+Added forced password setup for ADMIN/SUPERADMIN accounts with no passwordHash. `verify-login-code` now returns `next:'set-password'` for such accounts; the new `set-initial-password` endpoint validates the challenge token, hashes and saves the password, issues a fresh challenge, and returns a new token so the login page can proceed directly to `signIn('admin-2fa')`. `AdminLoginChallenge` table added via migration. Login page gains a `set-password` step with password + confirm fields and client-side match validation.
+
+---
+
 ## YooKassa Payment Integration
 
 **Branch:** yookassa-payment
