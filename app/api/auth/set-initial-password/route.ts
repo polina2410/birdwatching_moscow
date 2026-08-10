@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { setInitialPasswordSchema } from '@/lib/validation/auth'
 import { generateChallengeToken, hashChallengeToken } from '@/lib/auth/challenge'
-import { BCRYPT_COST, ADMIN_CHALLENGE_TTL_MS } from '@/lib/constants'
+import { BCRYPT_COST, ADMIN_CHALLENGE_TTL_MS, HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_TOO_MANY_REQUESTS } from '@/lib/constants'
 import { validateRequest } from '@/lib/api/validate'
 import { checkRateLimit } from '@/lib/rateLimit'
 
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: 'Too many requests' },
-      { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+      { status: HTTP_STATUS_TOO_MANY_REQUESTS, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
     )
   }
 
@@ -36,14 +36,14 @@ export async function POST(req: Request) {
     },
   })
   if (!challenge) {
-    return NextResponse.json({ error: 'invalid_challenge' }, { status: 401 })
+    return NextResponse.json({ error: 'invalid_challenge' }, { status: HTTP_STATUS_UNAUTHORIZED })
   }
 
   const user = await prisma.user.findFirst({
     where: { email, deletedAt: null },
   })
   if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN') || user.passwordHash !== null) {
-    return NextResponse.json({ error: 'not_eligible' }, { status: 400 })
+    return NextResponse.json({ error: 'not_eligible' }, { status: HTTP_STATUS_BAD_REQUEST })
   }
 
   const passwordHash = await bcrypt.hash(password, BCRYPT_COST)

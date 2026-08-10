@@ -5,8 +5,10 @@ import Link from 'next/link'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { safeRedirect } from '@/utils/safeRedirect'
-import { maskEmail } from '@/utils/maskEmail'
+import { RETURN_URL_PARAM, CALLBACK_URL_PARAM, REGISTERED_PARAM, HTTP_METHOD, JSON_HEADERS, LOGIN_CODE_PROVIDER_ID, ADMIN_2FA_PROVIDER_ID, LOGIN_CODE_LENGTH, PASSWORD_MIN_LENGTH } from '@/lib/constants'
+import { AUTH_ERROR_ACCOUNT_BLOCKED, AUTH_ERROR_PASSWORD_RESET_REQUIRED } from '@/lib/auth/errors'
 import { useAuthForm } from '@/hooks/useAuthForm'
+import { useLooksLikeEmail } from '@/hooks/useLooksLikeEmail'
 import { AUTH_ERRORS } from '@/lib/auth-errors'
 import { AUTH_LABELS } from '@/lib/auth-labels'
 
@@ -16,17 +18,19 @@ const LC = AUTH_LABELS.loginCode
 const LA = AUTH_LABELS.adminPassword
 const ASP = AUTH_LABELS.adminSetPassword
 
-type Step = 'email' | 'code' | 'password' | 'set-password'
+type LoginStep = 'email' | 'code' | 'password' | 'set-password'
 
 function LoginCodeForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = safeRedirect(
-    searchParams.get('returnUrl') ?? searchParams.get('callbackUrl')
+    searchParams.get(RETURN_URL_PARAM) ?? searchParams.get(CALLBACK_URL_PARAM)
   )
   const { error, setError, loading, run } = useAuthForm()
-  const [step, setStep] = useState<Step>('email')
+  const [step, setStep] = useState<LoginStep>('email')
   const [email, setEmail] = useState('')
+  const [emailInput, setEmailInput] = useState('')
+  const showEmailSubmit = useLooksLikeEmail(emailInput)
   const [challengeToken, setChallengeToken] = useState('')
   const codeInputRef = useRef<HTMLInputElement>(null)
   const passwordInputRef = useRef<HTMLInputElement>(null)
@@ -44,13 +48,13 @@ function LoginCodeForm() {
     if (step === 'set-password') newPasswordInputRef.current?.focus()
   }, [step])
 
-  const isRegistered = searchParams.get('registered') === '1'
+  const isRegistered = searchParams.get(REGISTERED_PARAM) === '1'
 
   async function requestCode(address: string) {
     await run(async () => {
       await fetch('/api/auth/request-login-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: HTTP_METHOD.POST,
+        headers: JSON_HEADERS,
         body: JSON.stringify({ email: address }),
       })
       setEmail(address)
@@ -71,8 +75,8 @@ function LoginCodeForm() {
 
     await run(async () => {
       const verifyRes = await fetch('/api/auth/verify-login-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: HTTP_METHOD.POST,
+        headers: JSON_HEADERS,
         body: JSON.stringify({ email, code }),
       })
       const verifyData = await verifyRes.json()
@@ -95,8 +99,8 @@ function LoginCodeForm() {
       }
 
       // USER path: let the login-code provider do the full verification
-      const result = await signIn('login-code', { email, code, redirect: false })
-      if (result?.code === 'account_blocked') {
+      const result = await signIn(LOGIN_CODE_PROVIDER_ID, { email, code, redirect: false })
+      if (result?.code === AUTH_ERROR_ACCOUNT_BLOCKED) {
         setError(AUTH_ERRORS.accountBlocked)
       } else if (result?.error) {
         setError(AUTH_ERRORS.invalidCode)
@@ -120,8 +124,8 @@ function LoginCodeForm() {
 
     await run(async () => {
       const setRes = await fetch('/api/auth/set-initial-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: HTTP_METHOD.POST,
+        headers: JSON_HEADERS,
         body: JSON.stringify({ email, challengeToken, password }),
       })
       if (!setRes.ok) {
@@ -130,15 +134,15 @@ function LoginCodeForm() {
       }
       const setData = await setRes.json()
 
-      const result = await signIn('admin-2fa', {
+      const result = await signIn(ADMIN_2FA_PROVIDER_ID, {
         email,
         challengeToken: setData.challengeToken,
         password,
         redirect: false,
       })
-      if (result?.code === 'account_blocked') {
+      if (result?.code === AUTH_ERROR_ACCOUNT_BLOCKED) {
         setError(AUTH_ERRORS.accountBlocked)
-      } else if (result?.code === 'password_reset_required') {
+      } else if (result?.code === AUTH_ERROR_PASSWORD_RESET_REQUIRED) {
         setError(AUTH_ERRORS.passwordResetRequired)
       } else if (result?.error) {
         setError(AUTH_ERRORS.wrongCredentials)
@@ -155,15 +159,15 @@ function LoginCodeForm() {
     const password = String(form.get('password') ?? '')
 
     await run(async () => {
-      const result = await signIn('admin-2fa', {
+      const result = await signIn(ADMIN_2FA_PROVIDER_ID, {
         email,
         challengeToken,
         password,
         redirect: false,
       })
-      if (result?.code === 'account_blocked') {
+      if (result?.code === AUTH_ERROR_ACCOUNT_BLOCKED) {
         setError(AUTH_ERRORS.accountBlocked)
-      } else if (result?.code === 'password_reset_required') {
+      } else if (result?.code === AUTH_ERROR_PASSWORD_RESET_REQUIRED) {
         setError(AUTH_ERRORS.passwordResetRequired)
       } else if (result?.error) {
         setError(AUTH_ERRORS.wrongCredentials)
@@ -188,11 +192,20 @@ function LoginCodeForm() {
           <form onSubmit={handleEmailSubmit}>
             <div>
               <label htmlFor="email">{C.emailField}</label>
-              <input id="email" name="email" type="email" required autoComplete="email" />
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                onChange={(e) => setEmailInput(e.target.value)}
+              />
             </div>
-            <button type="submit" disabled={loading}>
-              {loading ? LC.requesting : LC.requestCode}
-            </button>
+            {(showEmailSubmit || loading) && (
+              <button type="submit" disabled={loading}>
+                {loading ? LC.requesting : LC.requestCode}
+              </button>
+            )}
           </form>
           <Link href="/register">{L.registerLink}</Link>
         </>
@@ -200,9 +213,7 @@ function LoginCodeForm() {
 
       {step === 'code' && (
         <>
-          <p id="code-sent-to">
-            {LC.codeSentTo} {maskEmail(email)}
-          </p>
+          <p id="code-sent-to">{LC.codeSentTo}</p>
           <form onSubmit={handleCodeSubmit}>
             <div>
               <label htmlFor="code">{LC.codeField}</label>
@@ -212,7 +223,7 @@ function LoginCodeForm() {
                 name="code"
                 type="text"
                 required
-                maxLength={6}
+                maxLength={LOGIN_CODE_LENGTH}
                 inputMode="text"
                 autoComplete="one-time-code"
                 autoCapitalize="characters"
@@ -244,7 +255,7 @@ function LoginCodeForm() {
               name="newPassword"
               type="password"
               required
-              minLength={16}
+              minLength={PASSWORD_MIN_LENGTH}
               autoComplete="new-password"
             />
           </div>
@@ -255,7 +266,7 @@ function LoginCodeForm() {
               name="confirmPassword"
               type="password"
               required
-              minLength={16}
+              minLength={PASSWORD_MIN_LENGTH}
               autoComplete="new-password"
             />
           </div>

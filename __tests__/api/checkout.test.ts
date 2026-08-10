@@ -24,6 +24,7 @@ vi.mock('@/lib/rateLimit', () => ({ checkRateLimit: checkRateLimitMock }))
 vi.mock('@/lib/payments/yookassa', () => ({ createPayment: createPaymentMock }))
 
 import { POST } from '@/app/api/checkout/route'
+import { HTTP_METHOD, JSON_HEADERS, HTTP_STATUS_CONFLICT, HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_TOO_MANY_REQUESTS, HTTP_STATUS_BAD_GATEWAY } from '@/lib/constants'
 
 const SESSION = { user: { id: 'user-1', email: 'a@test.com', name: 'A', role: 'USER' } }
 const WALK = { id: 'walk-1', title: 'Лесная прогулка', priceKopecks: 75000, capacity: 10 }
@@ -35,8 +36,8 @@ const ORDER = { id: 'order-1', totalKopecks: 150000, status: 'PENDING', yooKassa
 
 function makeRequest(body = {}) {
   return new Request('http://localhost/api/checkout', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: HTTP_METHOD.POST,
+    headers: JSON_HEADERS,
     body: JSON.stringify(body),
   })
 }
@@ -65,7 +66,7 @@ describe('POST /api/checkout — auth', () => {
   it('returns 401 when not authenticated', async () => {
     authMock.mockResolvedValue(null)
     const res = await POST(makeRequest())
-    expect(res.status).toBe(401)
+    expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED)
   })
 })
 
@@ -73,7 +74,7 @@ describe('POST /api/checkout — cart validation', () => {
   it('returns 409 CART_EMPTY when user has no cart items', async () => {
     txMock.cartItem.findMany.mockResolvedValue([])
     const res = await POST(makeRequest())
-    expect(res.status).toBe(409)
+    expect(res.status).toBe(HTTP_STATUS_CONFLICT)
     const body = await res.json()
     expect(body.code).toBe('CART_EMPTY')
   })
@@ -83,7 +84,7 @@ describe('POST /api/checkout — cart validation', () => {
       { ...CART_ITEMS[0], reservedUntil: PAST },
     ])
     const res = await POST(makeRequest())
-    expect(res.status).toBe(409)
+    expect(res.status).toBe(HTTP_STATUS_CONFLICT)
     const body = await res.json()
     expect(body.code).toBe('CART_EXPIRED')
   })
@@ -92,7 +93,7 @@ describe('POST /api/checkout — cart validation', () => {
     // walk has capacity 10, 10 tickets already sold
     txMock.ticket.count.mockResolvedValue(10)
     const res = await POST(makeRequest())
-    expect(res.status).toBe(409)
+    expect(res.status).toBe(HTTP_STATUS_CONFLICT)
     const body = await res.json()
     expect(body.code).toBe('CAPACITY_EXCEEDED')
   })
@@ -173,7 +174,7 @@ describe('POST /api/checkout — provider failure', () => {
   it('returns 502 when ЮKassa returns 5xx', async () => {
     createPaymentMock.mockRejectedValue(Object.assign(new Error('Provider error'), { code: 'PROVIDER_5XX' }))
     const res = await POST(makeRequest())
-    expect(res.status).toBe(502)
+    expect(res.status).toBe(HTTP_STATUS_BAD_GATEWAY)
   })
 
   it('order stays PENDING with null yooKassaPaymentId on provider failure', async () => {
@@ -191,7 +192,7 @@ describe('POST /api/checkout — rate limit', () => {
   it('returns 429 when rate limit is hit', async () => {
     checkRateLimitMock.mockResolvedValue({ allowed: false, retryAfterSeconds: 30 })
     const res = await POST(makeRequest())
-    expect(res.status).toBe(429)
+    expect(res.status).toBe(HTTP_STATUS_TOO_MANY_REQUESTS)
   })
 })
 

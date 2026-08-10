@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import RequestResetPage from '@/app/(auth)/reset-password/page'
 import { AUTH_ERRORS } from '@/lib/auth-errors'
 import { AUTH_LABELS } from '@/lib/auth-labels'
+import { HTTP_METHOD, JSON_HEADERS, HTTP_STATUS_INTERNAL_SERVER_ERROR } from '@/lib/constants'
 
 const L = AUTH_LABELS.resetRequest
 const C = AUTH_LABELS.common
@@ -37,8 +38,8 @@ describe('RequestResetPage — success', () => {
 
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith('/api/auth/request-password-reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: HTTP_METHOD.POST,
+        headers: JSON_HEADERS,
         body: JSON.stringify({ email: 'user@example.com' }),
       })
       expect(screen.getByRole('heading', { level: 1, name: L.successTitle })).toBeInTheDocument()
@@ -65,7 +66,7 @@ describe('RequestResetPage — errors & loading', () => {
   })
 
   it('shows generic error on server failure', async () => {
-    (fetch as Mock).mockResolvedValue({ ok: false, status: 500 })
+    (fetch as Mock).mockResolvedValue({ ok: false, status: HTTP_STATUS_INTERNAL_SERVER_ERROR })
     render(<RequestResetPage />)
     fillAndSubmit()
     await waitFor(() =>

@@ -1,11 +1,11 @@
 import axios from 'axios'
 import { env } from '@/lib/env'
+import { HTTP_STATUS_TOO_MANY_REQUESTS, HTTP_STATUS_INTERNAL_SERVER_ERROR } from '@/lib/constants'
 import { kopecksToString } from '@/lib/payments/money'
 import type { PaymentInput, PaymentResult, YooKassaClient, YooKassaPaymentResponse } from './types'
 
 const YOOKASSA_TIMEOUT_MS = 10_000
-const RETRYABLE_STATUS_THRESHOLD = 500
-const RATE_LIMITED_STATUS = 429
+const RETRYABLE_STATUS_THRESHOLD = HTTP_STATUS_INTERNAL_SERVER_ERROR
 
 const yooKassaHttp = axios.create({
   baseURL: env.YOOKASSA_API_URL,
@@ -18,7 +18,7 @@ const yooKassaHttp = axios.create({
 })
 
 function isRetryableStatus(status: number): boolean {
-  return status === RATE_LIMITED_STATUS || status >= RETRYABLE_STATUS_THRESHOLD
+  return status === HTTP_STATUS_TOO_MANY_REQUESTS || status >= RETRYABLE_STATUS_THRESHOLD
 }
 
 function providerError(action: string, status: number): Error {

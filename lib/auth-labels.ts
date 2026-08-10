@@ -29,7 +29,7 @@ export const AUTH_LABELS = {
     verify:            'Войти',
     verifying:         'Проверяем код…',
     codeField:         'Код из письма',
-    codeSentTo:        'Мы отправили код на',
+    codeSentTo:        'Если аккаунт с этой почтой существует, письмо с кодом уже отправлено.',
     resendCode:        'Отправить код снова',
     changeEmail:       'Указать другой email',
   },

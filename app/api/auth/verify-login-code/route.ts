@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { verifyLoginCodeSchema } from '@/lib/validation/auth'
 import { hashLoginCode } from '@/lib/login-code'
 import { generateChallengeToken, hashChallengeToken } from '@/lib/auth/challenge'
-import { LOGIN_CODE_MAX_ATTEMPTS, ADMIN_CHALLENGE_TTL_MS } from '@/lib/constants'
+import { LOGIN_CODE_MAX_ATTEMPTS, ADMIN_CHALLENGE_TTL_MS, HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_TOO_MANY_REQUESTS } from '@/lib/constants'
 import { validateRequest } from '@/lib/api/validate'
 import { checkRateLimit } from '@/lib/rateLimit'
 
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: 'Too many requests' },
-      { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+      { status: HTTP_STATUS_TOO_MANY_REQUESTS, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
     )
   }
 
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
         data: { attempts: { increment: 1 } },
       })
     }
-    return NextResponse.json({ error: 'invalid_code' }, { status: 401 })
+    return NextResponse.json({ error: 'invalid_code' }, { status: HTTP_STATUS_UNAUTHORIZED })
   }
 
   await prisma.loginCode.update({

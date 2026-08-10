@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { registerSchema } from '@/lib/validation/auth'
 import { sendMail } from '@/lib/mail'
 import { validateRequest } from '@/lib/api/validate'
+import { HTTP_STATUS_CONFLICT, HTTP_STATUS_INTERNAL_SERVER_ERROR } from '@/lib/constants'
 
 export async function POST(req: Request) {
   const result = await validateRequest(req, registerSchema)
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
     if (existing) {
       return NextResponse.json(
         { error: 'Email is already taken' },
-        { status: 409 }
+        { status: HTTP_STATUS_CONFLICT }
       )
     }
 
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
     })
   } catch (err) {
     console.error('POST /api/auth/register failed', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: HTTP_STATUS_INTERNAL_SERVER_ERROR })
   }
 
   return NextResponse.json({ ok: true })

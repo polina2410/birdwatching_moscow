@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import LoginPage from '@/app/(auth)/login/page'
 import { AUTH_ERRORS } from '@/lib/auth-errors'
+import { AUTH_ERROR_ACCOUNT_BLOCKED, AUTH_ERROR_PASSWORD_RESET_REQUIRED } from '@/lib/auth/errors'
+import { ADMIN_2FA_PROVIDER_ID, LOGIN_CODE_PROVIDER_ID } from '@/lib/constants'
 import { AUTH_LABELS } from '@/lib/auth-labels'
 
 const { pushMock, refreshMock, searchParamsGetMock, signInMock } = vi.hoisted(() => ({
@@ -99,6 +101,7 @@ describe('LoginPage — step 1 (email)', () => {
 async function submitEmail(email = 'user@test.com') {
   render(<LoginPage />)
   fireEvent.change(screen.getByLabelText(C.emailField), { target: { value: email } })
+  await waitFor(() => screen.getByRole('button', { name: LC.requestCode }))
   fireEvent.submit(screen.getByRole('button', { name: LC.requestCode }))
   await waitFor(() => screen.getByLabelText(LC.codeField))
 }
@@ -123,7 +126,7 @@ describe('LoginPage — step 2 (code entry)', () => {
     fireEvent.change(screen.getByLabelText(LC.codeField), { target: { value: 'ABCD2F' } })
     fireEvent.submit(screen.getByRole('button', { name: LC.verify }))
     await waitFor(() =>
-      expect(signInMock).toHaveBeenCalledWith('login-code', {
+      expect(signInMock).toHaveBeenCalledWith(LOGIN_CODE_PROVIDER_ID, {
         email: 'user@test.com',
         code: 'ABCD2F',
         redirect: false,
@@ -179,7 +182,7 @@ describe('LoginPage — step 3 (admin password)', () => {
     fireEvent.change(screen.getByLabelText(C.passwordField), { target: { value: 'AdminPass123!' } })
     fireEvent.submit(screen.getByRole('button', { name: LA.submit }))
     await waitFor(() =>
-      expect(signInMock).toHaveBeenCalledWith('admin-2fa', {
+      expect(signInMock).toHaveBeenCalledWith(ADMIN_2FA_PROVIDER_ID, {
         email: 'admin@test.com',
         challengeToken: 'tok123',
         password: 'AdminPass123!',
@@ -197,7 +200,7 @@ describe('LoginPage — step 3 (admin password)', () => {
   })
 
   it('password_reset_required → AUTH_ERRORS.passwordResetRequired', async () => {
-    signInMock.mockResolvedValue({ error: 'AccessDenied', code: 'password_reset_required' })
+    signInMock.mockResolvedValue({ error: 'AccessDenied', code: AUTH_ERROR_PASSWORD_RESET_REQUIRED })
     await advanceToPasswordStep()
     fireEvent.change(screen.getByLabelText(C.passwordField), { target: { value: 'pass' } })
     fireEvent.submit(screen.getByRole('button', { name: LA.submit }))
@@ -207,7 +210,7 @@ describe('LoginPage — step 3 (admin password)', () => {
   })
 
   it('account_blocked → AUTH_ERRORS.accountBlocked', async () => {
-    signInMock.mockResolvedValue({ error: 'AccessDenied', code: 'account_blocked' })
+    signInMock.mockResolvedValue({ error: 'AccessDenied', code: AUTH_ERROR_ACCOUNT_BLOCKED })
     await advanceToPasswordStep()
     fireEvent.change(screen.getByLabelText(C.passwordField), { target: { value: 'pass' } })
     fireEvent.submit(screen.getByRole('button', { name: LA.submit }))
@@ -285,7 +288,7 @@ describe('LoginPage — set-password step (admin first login)', () => {
     fireEvent.change(screen.getByLabelText(ASP.confirmField), { target: { value: 'aaaaaaaaaaaaaaaa' } })
     fireEvent.submit(screen.getByRole('button', { name: ASP.submit }))
     await waitFor(() =>
-      expect(signInMock).toHaveBeenCalledWith('admin-2fa', {
+      expect(signInMock).toHaveBeenCalledWith(ADMIN_2FA_PROVIDER_ID, {
         email: 'admin@test.com',
         challengeToken: 'newtoken456',
         password: 'aaaaaaaaaaaaaaaa',
@@ -304,7 +307,7 @@ describe('LoginPage — set-password step (admin first login)', () => {
   })
 
   it('account_blocked → AUTH_ERRORS.accountBlocked', async () => {
-    signInMock.mockResolvedValue({ error: 'AccessDenied', code: 'account_blocked' })
+    signInMock.mockResolvedValue({ error: 'AccessDenied', code: AUTH_ERROR_ACCOUNT_BLOCKED })
     await advanceToSetPasswordStep()
     fireEvent.change(screen.getByLabelText(ASP.passwordField), { target: { value: 'aaaaaaaaaaaaaaaa' } })
     fireEvent.change(screen.getByLabelText(ASP.confirmField), { target: { value: 'aaaaaaaaaaaaaaaa' } })
@@ -342,7 +345,7 @@ describe('LoginPage — errors (step 2)', () => {
   })
 
   it('account_blocked code → AUTH_ERRORS.accountBlocked', async () => {
-    signInMock.mockResolvedValue({ error: 'AccessDenied', code: 'account_blocked' })
+    signInMock.mockResolvedValue({ error: 'AccessDenied', code: AUTH_ERROR_ACCOUNT_BLOCKED })
     await submitEmail()
     fireEvent.change(screen.getByLabelText(LC.codeField), { target: { value: 'ABCD2F' } })
     fireEvent.submit(screen.getByRole('button', { name: LC.verify }))

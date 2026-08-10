@@ -12,6 +12,7 @@ vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('@/lib/mail', () => ({ sendMail: sendMailMock }))
 
 import { POST } from '@/app/api/auth/request-password-reset/route'
+import { HTTP_METHOD, JSON_HEADERS } from '@/lib/constants'
 
 const USER = { id: 'user-1', email: 'user@test.com', role: 'USER', deletedAt: null }
 const ADMIN = { id: 'admin-1', email: 'admin@test.com', role: 'ADMIN', deletedAt: null }
@@ -20,8 +21,8 @@ const SAFE_RESPONSE_MESSAGE = 'If this email is registered, a reset link has bee
 
 function makeReq(email: string) {
   return new Request('http://localhost/api/auth/request-password-reset', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: HTTP_METHOD.POST,
+    headers: JSON_HEADERS,
     body: JSON.stringify({ email }),
   })
 }

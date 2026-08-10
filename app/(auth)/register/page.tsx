@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { useLooksLikeEmail } from '@/hooks/useLooksLikeEmail'
+import { HTTP_METHOD, JSON_HEADERS, REGISTERED_PARAM, HTTP_STATUS_CONFLICT } from '@/lib/constants'
 import { useRouter } from 'next/navigation'
 import { useAuthForm } from '@/hooks/useAuthForm'
 import { AUTH_ERRORS } from '@/lib/auth-errors'
@@ -23,6 +25,8 @@ export default function RegisterPage() {
   const router = useRouter()
   const { error, setError, loading, run } = useAuthForm()
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({})
+  const [emailInput, setEmailInput] = useState('')
+  const showSubmit = useLooksLikeEmail(emailInput)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -31,8 +35,8 @@ export default function RegisterPage() {
 
     await run(async () => {
       const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: HTTP_METHOD.POST,
+        headers: JSON_HEADERS,
         body: JSON.stringify({
           email: form.get('email'),
           name: form.get('name'),
@@ -40,13 +44,13 @@ export default function RegisterPage() {
       })
 
       if (res.ok) {
-        router.push('/login?registered=1')
+        router.push(`/login?${REGISTERED_PARAM}=1`)
         return
       }
 
       const data = await safeJsonParse<{ issues?: Record<string, string[]> }>(res)
 
-      if (res.status === 409) {
+      if (res.status === HTTP_STATUS_CONFLICT) {
         setError(AUTH_ERRORS.emailTaken)
       } else if (data?.issues) {
         setFieldErrors(data.issues)
@@ -68,12 +72,21 @@ export default function RegisterPage() {
         </div>
         <div>
           <label htmlFor="email">{C.emailField}</label>
-          <input id="email" name="email" type="email" required autoComplete="email" />
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            onChange={(e) => setEmailInput(e.target.value)}
+          />
           {fieldErrors.email && <span role="alert">{fieldErrors.email.join(', ')}</span>}
         </div>
-        <button type="submit" disabled={loading}>
-          {loading ? L.submitting : L.submit}
-        </button>
+        {(showSubmit || loading) && (
+          <button type="submit" disabled={loading}>
+            {loading ? L.submitting : L.submit}
+          </button>
+        )}
       </form>
       <Link href="/login">{L.loginLink}</Link>
     </main>

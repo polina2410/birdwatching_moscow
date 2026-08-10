@@ -21,6 +21,7 @@ vi.mock('@/lib/login-code', () => ({
 }))
 
 import { POST } from '@/app/api/auth/request-login-code/route'
+import { HTTP_METHOD, JSON_HEADERS, HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_TOO_MANY_REQUESTS } from '@/lib/constants'
 
 const USER = {
   id: 'user-1',
@@ -33,8 +34,8 @@ const USER = {
 
 function makeReq(body: object) {
   return new Request('http://localhost/api/auth/request-login-code', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: HTTP_METHOD.POST,
+    headers: JSON_HEADERS,
     body: JSON.stringify(body),
   })
 }
@@ -131,7 +132,7 @@ describe('POST /api/auth/request-login-code — rate limiting', () => {
   it('returns 429 when rate limit exceeded', async () => {
     checkRateLimitMock.mockResolvedValue({ allowed: false, retryAfterSeconds: 45 })
     const res = await POST(makeReq({ email: USER.email }))
-    expect(res.status).toBe(429)
+    expect(res.status).toBe(HTTP_STATUS_TOO_MANY_REQUESTS)
     expect(res.headers.get('Retry-After')).toBe('45')
     expect(sendMailMock).not.toHaveBeenCalled()
   })
@@ -140,11 +141,11 @@ describe('POST /api/auth/request-login-code — rate limiting', () => {
 describe('POST /api/auth/request-login-code — validation', () => {
   it('returns 400 for an invalid email', async () => {
     const res = await POST(makeReq({ email: 'not-an-email' }))
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
   })
 
   it('returns 400 for a missing email', async () => {
     const res = await POST(makeReq({}))
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
   })
 })

@@ -26,6 +26,33 @@ export const LOGIN_CODE_TTL_MS = 5 * 60 * 1000
 export const LOGIN_CODE_MAX_ATTEMPTS = 5
 export const ADMIN_CHALLENGE_TTL_MS = 10 * 60 * 1000
 
+export const JSON_HEADERS = { 'Content-Type': 'application/json' } as const
+
+export const LOGIN_CODE_PROVIDER_ID = 'login-code'
+export const ADMIN_2FA_PROVIDER_ID = 'admin-2fa'
+
+export const HTTP_STATUS_BAD_REQUEST = 400
+export const HTTP_STATUS_UNAUTHORIZED = 401
+export const HTTP_STATUS_FORBIDDEN = 403
+export const HTTP_STATUS_NOT_FOUND = 404
+export const HTTP_STATUS_CONFLICT = 409
+export const HTTP_STATUS_TOO_MANY_REQUESTS = 429
+export const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500
+export const HTTP_STATUS_BAD_GATEWAY = 502
+
+export const HTTP_METHOD = {
+  GET: 'GET',
+  POST: 'POST',
+  PUT: 'PUT',
+  PATCH: 'PATCH',
+  DELETE: 'DELETE',
+} as const
+
+// Query param names used in login redirects
+export const RETURN_URL_PARAM = 'returnUrl'
+export const CALLBACK_URL_PARAM = 'callbackUrl'
+export const REGISTERED_PARAM = 'registered'
+
 // Routes that require a session — extend as new protected pages land
 export const LOGIN_PATH = '/login'
 export const PROTECTED_PATH_PREFIXES = ['/profile'] as const

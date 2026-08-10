@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { AUTH_ERROR_ACCOUNT_BLOCKED, AUTH_ERROR_PASSWORD_RESET_REQUIRED } from '@/lib/auth/errors'
 
 const { prismaMock, bcryptCompareMock, hashChallengeTokenMock } = vi.hoisted(() => ({
   prismaMock: {
@@ -96,7 +97,7 @@ describe('authorizeAdminTwoFactor — AccountBlockedError', () => {
   it('throws AccountBlockedError even when password is correct', async () => {
     await expect(
       authorizeAdminTwoFactor({ email: ADMIN.email, challengeToken: 'tok', password: 'pass' })
-    ).rejects.toMatchObject({ code: 'account_blocked' })
+    ).rejects.toMatchObject({ code: AUTH_ERROR_ACCOUNT_BLOCKED })
   })
 
   it('does not call bcrypt.compare when account is blocked', async () => {
@@ -117,7 +118,7 @@ describe('authorizeAdminTwoFactor — PasswordResetRequiredError', () => {
   it('throws PasswordResetRequiredError even when password is correct', async () => {
     await expect(
       authorizeAdminTwoFactor({ email: ADMIN.email, challengeToken: 'tok', password: 'pass' })
-    ).rejects.toMatchObject({ code: 'password_reset_required' })
+    ).rejects.toMatchObject({ code: AUTH_ERROR_PASSWORD_RESET_REQUIRED })
   })
 
   it('does not call bcrypt.compare when passwordResetRequired is true', async () => {
