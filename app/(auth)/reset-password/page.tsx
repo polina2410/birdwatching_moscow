@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useAuthForm } from '@/hooks/useAuthForm'
 import { AUTH_ERRORS } from '@/lib/auth-errors'
 import { AUTH_LABELS } from '@/lib/auth-labels'
+import { HTTP_METHOD, JSON_HEADERS } from '@/lib/constants'
 
 const L = AUTH_LABELS.resetRequest
 const C = AUTH_LABELS.common
@@ -19,8 +20,8 @@ export default function RequestResetPage() {
 
     await run(async () => {
       const res = await fetch('/api/auth/request-password-reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: HTTP_METHOD.POST,
+        headers: JSON_HEADERS,
         body: JSON.stringify({ email: form.get('email') }),
       })
 

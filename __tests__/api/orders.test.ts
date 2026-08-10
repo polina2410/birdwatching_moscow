@@ -11,6 +11,7 @@ vi.mock('@/lib/prisma', () => ({
 }))
 
 import { GET } from '@/app/api/orders/[id]/route'
+import { HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_NOT_FOUND } from '@/lib/constants'
 
 const OWNER_SESSION = { user: { id: 'user-owner', email: 'owner@test.com', role: 'USER' } }
 const OTHER_SESSION = { user: { id: 'user-other', email: 'other@test.com', role: 'USER' } }
@@ -34,7 +35,7 @@ describe('GET /api/orders/[id] — auth', () => {
     authMock.mockResolvedValue(null)
     const { req, context } = makeRequest('order-1')
     const res = await GET(req, context)
-    expect(res.status).toBe(401)
+    expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED)
   })
 })
 
@@ -51,13 +52,13 @@ describe('GET /api/orders/[id] — authorization', () => {
     authMock.mockResolvedValue(OTHER_SESSION)
     const { req, context } = makeRequest('order-1')
     const res = await GET(req, context)
-    expect(res.status).toBe(404)
+    expect(res.status).toBe(HTTP_STATUS_NOT_FOUND)
   })
 
   it('returns 404 when order does not exist', async () => {
     orderFindUniqueMock.mockResolvedValue(null)
     const { req, context } = makeRequest('order-does-not-exist')
     const res = await GET(req, context)
-    expect(res.status).toBe(404)
+    expect(res.status).toBe(HTTP_STATUS_NOT_FOUND)
   })
 })

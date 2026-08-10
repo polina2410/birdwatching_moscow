@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import ConfirmResetPage from '@/app/(auth)/reset-password/[token]/page'
 import { AUTH_ERRORS } from '@/lib/auth-errors'
 import { AUTH_LABELS } from '@/lib/auth-labels'
+import { HTTP_METHOD, JSON_HEADERS } from '@/lib/constants'
 
 const pushMock = vi.fn()
 vi.mock('next/navigation', () => ({
@@ -39,8 +40,8 @@ describe('ConfirmResetPage — success', () => {
 
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: HTTP_METHOD.POST,
+        headers: JSON_HEADERS,
         body: JSON.stringify({
           token: 'valid-reset-token-123',
           newPassword: 'mySecretPassword99',

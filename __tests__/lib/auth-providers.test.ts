@@ -13,6 +13,7 @@ vi.mock('bcryptjs', () => ({ default: { compare: bcryptCompareMock, hash: vi.fn(
 
 import { authorizeLoginCode, authorizeCredentials } from '@/lib/auth/authorize'
 import { LOGIN_CODE_MAX_ATTEMPTS } from '@/lib/constants'
+import { AUTH_ERROR_ACCOUNT_BLOCKED, AUTH_ERROR_PASSWORD_RESET_REQUIRED } from '@/lib/auth/errors'
 
 const USER = {
   id: 'user-1',
@@ -133,7 +134,7 @@ describe('authorizeLoginCode — AccountBlockedError', () => {
   it('throws with code "account_blocked" for a valid code on a blocked user', async () => {
     prismaMock.user.findFirst.mockResolvedValue({ ...USER, blockedAt: new Date() })
     await expect(authorizeLoginCode({ email: USER.email, code: 'ABCD2F' })).rejects.toMatchObject({
-      code: 'account_blocked',
+      code: AUTH_ERROR_ACCOUNT_BLOCKED,
     })
   })
 })
@@ -155,7 +156,7 @@ describe('authorizeCredentials — forced rotation', () => {
     bcryptCompareMock.mockResolvedValue(true)
     await expect(
       authorizeCredentials({ email: ADMIN.email, password: 'CorrectPass123!' })
-    ).rejects.toMatchObject({ code: 'password_reset_required' })
+    ).rejects.toMatchObject({ code: AUTH_ERROR_PASSWORD_RESET_REQUIRED })
   })
 })
 
@@ -165,7 +166,7 @@ describe('authorizeCredentials — blocked account oracle guard (Bug 3 regressio
     bcryptCompareMock.mockResolvedValue(false)
     await expect(
       authorizeCredentials({ email: ADMIN.email, password: 'wrongpassword' })
-    ).rejects.toMatchObject({ code: 'account_blocked' })
+    ).rejects.toMatchObject({ code: AUTH_ERROR_ACCOUNT_BLOCKED })
   })
 
   it('does not call bcrypt.compare when the account is blocked', async () => {
@@ -183,7 +184,7 @@ describe('authorizeCredentials — passwordResetRequired oracle guard (Bug 3 reg
     bcryptCompareMock.mockResolvedValue(false)
     await expect(
       authorizeCredentials({ email: ADMIN.email, password: 'wrongpassword' })
-    ).rejects.toMatchObject({ code: 'password_reset_required' })
+    ).rejects.toMatchObject({ code: AUTH_ERROR_PASSWORD_RESET_REQUIRED })
   })
 
   it('does not call bcrypt.compare when passwordResetRequired is true', async () => {

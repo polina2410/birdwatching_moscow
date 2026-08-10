@@ -5,7 +5,7 @@ import { createPayment } from '@/lib/payments/yookassa'
 import { kopecksToString } from '@/lib/payments/money'
 import { buildReceipt, truncateDescription } from '@/lib/payments/receipt'
 import { env } from '@/lib/env'
-import { PAYMENT_HOLD_MINUTES } from '@/lib/constants'
+import { PAYMENT_HOLD_MINUTES, HTTP_STATUS_CONFLICT, HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_TOO_MANY_REQUESTS, HTTP_STATUS_BAD_GATEWAY } from '@/lib/constants'
 import type { Prisma } from '@/generated/prisma/client'
 import type { CheckoutErrorCode, WalkSnapshot, CreatedOrder, OrderLineItem } from '@/types/checkout'
 
@@ -37,12 +37,12 @@ async function createPendingOrder(
 
     const cartItems = await tx.cartItem.findMany({ where: { userId } })
     if (cartItems.length === 0) {
-      throw new CheckoutError('CART_EMPTY', 409)
+      throw new CheckoutError('CART_EMPTY', HTTP_STATUS_CONFLICT)
     }
 
     const activeCartItems = cartItems.filter((item) => item.reservedUntil > now)
     if (activeCartItems.length === 0) {
-      throw new CheckoutError('CART_EXPIRED', 409)
+      throw new CheckoutError('CART_EXPIRED', HTTP_STATUS_CONFLICT)
     }
 
     const walkIds = [...new Set(activeCartItems.map((item) => item.walkId))]
@@ -75,7 +75,7 @@ async function createPendingOrder(
       const seatsTaken = soldCount + cartSeats + orderSeats
 
       if (seatsTaken > walk.capacity) {
-        throw new CheckoutError('CAPACITY_EXCEEDED', 409)
+        throw new CheckoutError('CAPACITY_EXCEEDED', HTTP_STATUS_CONFLICT)
       }
     }
 
@@ -139,14 +139,14 @@ export async function POST(req: Request): Promise<NextResponse> {
   const session = await auth()
   const userId = session?.user?.id
   if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Unauthorized' }, { status: HTTP_STATUS_UNAUTHORIZED })
   }
 
   const rateLimit = await checkRateLimit(userId)
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: 'Too many requests' },
-      { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+      { status: HTTP_STATUS_TOO_MANY_REQUESTS, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
     )
   }
 
@@ -199,6 +199,6 @@ export async function POST(req: Request): Promise<NextResponse> {
     // Order stays PENDING with yooKassaPaymentId === null — nothing is silently
     // lost, and the client can retry checkout for the same (now empty) cart.
     console.error('[checkout] ЮKassa create payment failed', error)
-    return NextResponse.json({ code: 'PAYMENT_PROVIDER_UNAVAILABLE' }, { status: 502 })
+    return NextResponse.json({ code: 'PAYMENT_PROVIDER_UNAVAILABLE' }, { status: HTTP_STATUS_BAD_GATEWAY })
   }
 }

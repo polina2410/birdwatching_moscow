@@ -13,6 +13,7 @@ vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('bcryptjs', () => ({ default: { hash: bcryptHashMock, compare: vi.fn() } }))
 
 import { POST } from '@/app/api/auth/reset-password/route'
+import { HTTP_METHOD, JSON_HEADERS } from '@/lib/constants'
 
 const VALID_TOKEN_ROW = {
   id: 'tok-1',
@@ -31,8 +32,8 @@ const ADMIN = {
 
 function makeReq(body: object) {
   return new Request('http://localhost/api/auth/reset-password', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: HTTP_METHOD.POST,
+    headers: JSON_HEADERS,
     body: JSON.stringify(body),
   })
 }

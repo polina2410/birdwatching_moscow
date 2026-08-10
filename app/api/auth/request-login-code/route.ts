@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requestLoginCodeSchema } from '@/lib/validation/auth'
 import { generateLoginCode, hashLoginCode } from '@/lib/login-code'
 import { sendMail } from '@/lib/mail'
-import { LOGIN_CODE_TTL_MS } from '@/lib/constants'
+import { LOGIN_CODE_TTL_MS, HTTP_STATUS_TOO_MANY_REQUESTS } from '@/lib/constants'
 import { validateRequest } from '@/lib/api/validate'
 import { checkRateLimit } from '@/lib/rateLimit'
 
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: 'Too many requests' },
-      { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+      { status: HTTP_STATUS_TOO_MANY_REQUESTS, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
     )
   }
 
@@ -37,8 +37,7 @@ export async function POST(req: Request) {
       where: { email, deletedAt: null },
     })
 
-    // Codes are for regular accounts only; staff sign in at /login/password
-    if (user && user.role === 'USER' && !user.blockedAt) {
+    if (user && !user.blockedAt) {
       // One active code per email, mirroring the password-reset invalidation
       await prisma.loginCode.deleteMany({
         where: { email, usedAt: null },

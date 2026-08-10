@@ -15,7 +15,6 @@ export const AUTH_LABELS = {
 
   login: {
     title:        'Вход',
-    staffTitle:   'Вход для сотрудников',
     submit:       'Войти',
     submitting:   'Входим…',
     registerLink: 'Создать аккаунт',
@@ -30,10 +29,24 @@ export const AUTH_LABELS = {
     verify:            'Войти',
     verifying:         'Проверяем код…',
     codeField:         'Код из письма',
-    codeSentTo:        'Мы отправили код на',
-    passwordLoginLink: 'Вход для сотрудников',
+    codeSentTo:        'Если аккаунт с этой почтой существует, письмо с кодом уже отправлено.',
     resendCode:        'Отправить код снова',
     changeEmail:       'Указать другой email',
+  },
+
+  adminPassword: {
+    title:      'Введите пароль',
+    submit:     'Войти',
+    submitting: 'Входим…',
+  },
+
+  adminSetPassword: {
+    title:        'Создайте пароль',
+    passwordField: 'Новый пароль',
+    confirmField:  'Подтвердите пароль',
+    submit:        'Сохранить и войти',
+    submitting:    'Сохраняем…',
+    mismatch:      'Пароли не совпадают',
   },
 
   resetRequest: {

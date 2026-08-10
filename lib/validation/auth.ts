@@ -21,6 +21,18 @@ export const verifyLoginCodeSchema = z.object({
   code: z.string().min(1),
 })
 
+export const adminTwoFactorSchema = z.object({
+  email: z.string().email().max(MAX_EMAIL),
+  challengeToken: z.string().min(1),
+  password: z.string().min(1),
+})
+
+export const setInitialPasswordSchema = z.object({
+  email:          z.string().email().max(MAX_EMAIL),
+  challengeToken: z.string().min(1),
+  password:       z.string().min(PASSWORD_MIN_LENGTH),
+})
+
 export const requestResetSchema = z.object({
   email: z.string().email().max(MAX_EMAIL),
 })

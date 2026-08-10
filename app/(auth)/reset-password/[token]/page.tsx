@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { useAuthForm } from '@/hooks/useAuthForm'
 import { AUTH_ERRORS } from '@/lib/auth-errors'
 import { AUTH_LABELS } from '@/lib/auth-labels'
-import { PASSWORD_MIN_LENGTH } from '@/lib/constants'
+import { PASSWORD_MIN_LENGTH, HTTP_METHOD, JSON_HEADERS } from '@/lib/constants'
 
 const L = AUTH_LABELS.resetConfirm
 const C = AUTH_LABELS.common
@@ -30,8 +30,8 @@ export default function ConfirmResetPage() {
 
     await run(async () => {
       const res = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: HTTP_METHOD.POST,
+        headers: JSON_HEADERS,
         body: JSON.stringify({
           token: params.token,
           newPassword: form.get('password'),

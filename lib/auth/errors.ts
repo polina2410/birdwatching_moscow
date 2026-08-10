@@ -16,14 +16,17 @@ export class AuthCodeError extends Error {
   }
 }
 
+export const AUTH_ERROR_ACCOUNT_BLOCKED = 'account_blocked'
+export const AUTH_ERROR_PASSWORD_RESET_REQUIRED = 'password_reset_required'
+
 export class AccountBlockedError extends AuthCodeError {
   constructor() {
-    super('account_blocked')
+    super(AUTH_ERROR_ACCOUNT_BLOCKED)
   }
 }
 
 export class PasswordResetRequiredError extends AuthCodeError {
   constructor() {
-    super('password_reset_required')
+    super(AUTH_ERROR_PASSWORD_RESET_REQUIRED)
   }
 }

@@ -218,6 +218,17 @@ model PasswordResetToken {
   @@index([userId])
 }
 
+model AdminLoginChallenge {
+  id        String    @id @default(uuid())
+  email     String    @db.VarChar(254)
+  tokenHash String    @unique @db.VarChar(64)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+}
+
 model LoginCode {
   id String @id @default(uuid())
   // NOTE: keyed by email, not userId — the request endpoint does identical work whether or not the account exists

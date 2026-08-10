@@ -17,6 +17,7 @@ vi.mock('@/lib/payments/yookassa/allowlist', () => ({
 }))
 
 import { POST } from '@/app/api/payments/yookassa/webhook/route'
+import { HTTP_METHOD, JSON_HEADERS, HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_FORBIDDEN } from '@/lib/constants'
 
 function makeNotification(overrides: Record<string, unknown> = {}) {
   return {
@@ -35,11 +36,8 @@ function makeNotification(overrides: Record<string, unknown> = {}) {
 
 function makeRequest(body: unknown, ip = ALLOWED_IP) {
   return new Request('http://localhost/api/payments/yookassa/webhook', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Real-IP': ip,
-    },
+    method: HTTP_METHOD.POST,
+    headers: { ...JSON_HEADERS, 'X-Real-IP': ip },
     body: JSON.stringify(body),
   })
 }
@@ -53,7 +51,7 @@ beforeEach(() => {
 describe('POST /api/payments/yookassa/webhook — IP allowlist', () => {
   it('returns 403 for an IP outside the allowlist', async () => {
     const res = await POST(makeRequest(makeNotification(), BLOCKED_IP))
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(HTTP_STATUS_FORBIDDEN)
     expect(applyPaymentResultMock).not.toHaveBeenCalled()
   })
 
@@ -72,13 +70,13 @@ describe('POST /api/payments/yookassa/webhook — IP allowlist', () => {
 describe('POST /api/payments/yookassa/webhook — schema validation', () => {
   it('returns 400 for a body that fails Zod validation', async () => {
     const res = await POST(makeRequest({ type: 'notification', event: 'payment.succeeded' /* missing object */ }))
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
     expect(applyPaymentResultMock).not.toHaveBeenCalled()
   })
 
   it('returns 400 for a non-object body', async () => {
     const res = await POST(makeRequest('invalid'))
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
   })
 })
 

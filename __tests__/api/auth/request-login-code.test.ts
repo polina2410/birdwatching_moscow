@@ -21,6 +21,7 @@ vi.mock('@/lib/login-code', () => ({
 }))
 
 import { POST } from '@/app/api/auth/request-login-code/route'
+import { HTTP_METHOD, JSON_HEADERS, HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_TOO_MANY_REQUESTS } from '@/lib/constants'
 
 const USER = {
   id: 'user-1',
@@ -33,8 +34,8 @@ const USER = {
 
 function makeReq(body: object) {
   return new Request('http://localhost/api/auth/request-login-code', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: HTTP_METHOD.POST,
+    headers: JSON_HEADERS,
     body: JSON.stringify(body),
   })
 }
@@ -99,24 +100,39 @@ describe('POST /api/auth/request-login-code — safe response (no action taken)'
   it('unknown email → 200, no mail, no row', () =>
     expectSafeNoAction({ email: 'nobody@test.com' }, null))
 
-  it('ADMIN email → 200, no mail, no row', () =>
-    expectSafeNoAction({ email: 'admin@test.com' }, { ...USER, role: 'ADMIN' }))
-
-  it('SUPERADMIN email → 200, no mail, no row', () =>
-    expectSafeNoAction({ email: 'super@test.com' }, { ...USER, role: 'SUPERADMIN' }))
-
   it('blocked USER → 200, no mail, no row', () =>
     expectSafeNoAction({ email: USER.email }, { ...USER, blockedAt: new Date() }))
 
+  it('blocked ADMIN → 200, no mail, no row', () =>
+    expectSafeNoAction({ email: 'admin@test.com' }, { ...USER, role: 'ADMIN', blockedAt: new Date() }))
+
   it('soft-deleted USER → 200, no mail, no row', () =>
     expectSafeNoAction({ email: USER.email }, null)) // findFirst with deletedAt:null returns null
+})
+
+describe('POST /api/auth/request-login-code — ADMIN/SUPERADMIN receive codes', () => {
+  it('ADMIN email → 200, sends mail, creates row', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ ...USER, role: 'ADMIN', email: 'admin@test.com' })
+    const res = await POST(makeReq({ email: 'admin@test.com' }))
+    expect(res.status).toBe(200)
+    expect(sendMailMock).toHaveBeenCalledTimes(1)
+    expect(prismaMock.loginCode.create).toHaveBeenCalledTimes(1)
+  })
+
+  it('SUPERADMIN email → 200, sends mail, creates row', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ ...USER, role: 'SUPERADMIN', email: 'super@test.com' })
+    const res = await POST(makeReq({ email: 'super@test.com' }))
+    expect(res.status).toBe(200)
+    expect(sendMailMock).toHaveBeenCalledTimes(1)
+    expect(prismaMock.loginCode.create).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('POST /api/auth/request-login-code — rate limiting', () => {
   it('returns 429 when rate limit exceeded', async () => {
     checkRateLimitMock.mockResolvedValue({ allowed: false, retryAfterSeconds: 45 })
     const res = await POST(makeReq({ email: USER.email }))
-    expect(res.status).toBe(429)
+    expect(res.status).toBe(HTTP_STATUS_TOO_MANY_REQUESTS)
     expect(res.headers.get('Retry-After')).toBe('45')
     expect(sendMailMock).not.toHaveBeenCalled()
   })
@@ -125,11 +141,11 @@ describe('POST /api/auth/request-login-code — rate limiting', () => {
 describe('POST /api/auth/request-login-code — validation', () => {
   it('returns 400 for an invalid email', async () => {
     const res = await POST(makeReq({ email: 'not-an-email' }))
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
   })
 
   it('returns 400 for a missing email', async () => {
     const res = await POST(makeReq({}))
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
   })
 })

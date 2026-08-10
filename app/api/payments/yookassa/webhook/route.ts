@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_FORBIDDEN } from '@/lib/constants'
 import { applyPaymentResult } from '@/lib/payments/applyPaymentResult'
 import { yookassaNotificationSchema } from '@/lib/validation/payment'
 
@@ -28,14 +29,14 @@ export async function POST(req: Request): Promise<NextResponse> {
     const allowlist = await getIpAllowlist()
     const clientIp = getClientIp(req)
     if (!clientIp || !allowlist.includes(clientIp)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Forbidden' }, { status: HTTP_STATUS_FORBIDDEN })
     }
   }
 
   const body = await req.json().catch(() => null)
   const parsed = yookassaNotificationSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Validation failed' }, { status: 400 })
+    return NextResponse.json({ error: 'Validation failed' }, { status: HTTP_STATUS_BAD_REQUEST })
   }
 
   const { event, object } = parsed.data

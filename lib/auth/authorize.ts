@@ -1,7 +1,8 @@
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
-import { loginSchema, verifyLoginCodeSchema } from '@/lib/validation/auth'
+import { loginSchema, verifyLoginCodeSchema, adminTwoFactorSchema } from '@/lib/validation/auth'
 import { hashLoginCode } from '@/lib/login-code'
+import { hashChallengeToken } from '@/lib/auth/challenge'
 import { LOGIN_CODE_MAX_ATTEMPTS } from '@/lib/constants'
 import { AccountBlockedError, PasswordResetRequiredError } from '@/lib/auth/errors'
 import type { AuthorizedUser } from '@/types/auth'
@@ -75,6 +76,47 @@ export async function authorizeLoginCode(
   await prisma.loginCode.update({
     where: { id: match.id },
     data: { usedAt: new Date() },
+  })
+
+  return { id: user.id, email: user.email, name: user.name, role: user.role }
+}
+
+/**
+ * Second factor for ADMIN/SUPERADMIN: verifies the short-lived challenge token
+ * issued by POST /api/auth/verify-login-code, then checks the password.
+ * Status checks run before bcrypt to prevent oracle attacks.
+ */
+export async function authorizeAdminTwoFactor(
+  credentials: unknown
+): Promise<AuthorizedUser | null> {
+  const parsed = adminTwoFactorSchema.safeParse(credentials)
+  if (!parsed.success) return null
+
+  const { email, challengeToken, password } = parsed.data
+
+  const now = new Date()
+  const challenge = await prisma.adminLoginChallenge.findFirst({
+    where: {
+      email,
+      tokenHash: hashChallengeToken(challengeToken),
+      usedAt: null,
+      expiresAt: { gt: now },
+    },
+  })
+  if (!challenge) return null
+
+  const user = await prisma.user.findFirst({ where: { email, deletedAt: null } })
+  if (!user || !user.passwordHash) return null
+
+  if (user.blockedAt) throw new AccountBlockedError()
+  if (user.passwordResetRequired) throw new PasswordResetRequiredError()
+
+  const passwordMatch = await bcrypt.compare(password, user.passwordHash)
+  if (!passwordMatch) return null
+
+  await prisma.adminLoginChallenge.update({
+    where: { id: challenge.id },
+    data: { usedAt: now },
   })
 
   return { id: user.id, email: user.email, name: user.name, role: user.role }

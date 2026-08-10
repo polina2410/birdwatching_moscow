@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { HTTP_STATUS_BAD_REQUEST } from '@/lib/constants'
 import { z } from 'zod'
 import type { ZodType } from 'zod'
 
@@ -21,7 +22,7 @@ export async function validateRequest<T>(
           error: 'Validation failed',
           issues: z.flattenError(parsed.error).fieldErrors,
         },
-        { status: 400 }
+        { status: HTTP_STATUS_BAD_REQUEST }
       ),
     }
   }

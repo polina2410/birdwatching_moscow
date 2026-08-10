@@ -13,11 +13,12 @@ vi.mock('@/lib/mail', () => ({ sendMail: sendMailMock }))
 vi.mock('bcryptjs', () => ({ default: { hash: bcryptHashMock, compare: vi.fn() } }))
 
 import { POST } from '@/app/api/auth/register/route'
+import { HTTP_METHOD, JSON_HEADERS } from '@/lib/constants'
 
 function makeReq(body: object) {
   return new Request('http://localhost/api/auth/register', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: HTTP_METHOD.POST,
+    headers: JSON_HEADERS,
     body: JSON.stringify(body),
   })
 }

@@ -3,7 +3,7 @@ import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { confirmResetSchema } from '@/lib/validation/auth'
-import { BCRYPT_COST } from '@/lib/constants'
+import { BCRYPT_COST, HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_INTERNAL_SERVER_ERROR } from '@/lib/constants'
 import { validateRequest } from '@/lib/api/validate'
 
 const INVALID_LINK = { error: 'Invalid or expired link' }
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       resetToken.usedAt !== null ||
       resetToken.expiresAt <= now
     ) {
-      return NextResponse.json(INVALID_LINK, { status: 400 })
+      return NextResponse.json(INVALID_LINK, { status: HTTP_STATUS_BAD_REQUEST })
     }
 
     const user = await prisma.user.findFirst({
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     })
 
     if (!user) {
-      return NextResponse.json(INVALID_LINK, { status: 400 })
+      return NextResponse.json(INVALID_LINK, { status: HTTP_STATUS_BAD_REQUEST })
     }
 
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_COST)
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     })
   } catch (err) {
     console.error('POST /api/auth/reset-password failed', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: HTTP_STATUS_INTERNAL_SERVER_ERROR })
   }
 
   return NextResponse.json({ ok: true })
