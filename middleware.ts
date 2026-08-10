@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { safeRedirect } from '@/utils/safeRedirect'
-import { AUTH_PAGE_PATHS, LOGIN_PATH, PROTECTED_PATH_PREFIXES } from '@/lib/constants'
+import { AUTH_PAGE_PATHS, CALLBACK_URL_PARAM, LOGIN_PATH, PROTECTED_PATH_PREFIXES, RETURN_URL_PARAM } from '@/lib/constants'
 
 export default auth((req) => {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
@@ -30,7 +30,7 @@ export default auth((req) => {
     if (!isLoggedIn) {
       const loginUrl = req.nextUrl.clone()
       loginUrl.pathname = LOGIN_PATH
-      loginUrl.searchParams.set('returnUrl', pathname)
+      loginUrl.searchParams.set(RETURN_URL_PARAM, pathname)
       return NextResponse.redirect(loginUrl)
     }
     if (role === 'USER') {
@@ -48,13 +48,13 @@ export default auth((req) => {
   if (isProtected && !isLoggedIn) {
     const loginUrl = req.nextUrl.clone()
     loginUrl.pathname = LOGIN_PATH
-    loginUrl.searchParams.set('returnUrl', pathname)
+    loginUrl.searchParams.set(RETURN_URL_PARAM, pathname)
     return NextResponse.redirect(loginUrl)
   }
 
   if (isLoggedIn && (AUTH_PAGE_PATHS as readonly string[]).includes(pathname)) {
     const returnUrl =
-      req.nextUrl.searchParams.get('returnUrl') ?? req.nextUrl.searchParams.get('callbackUrl')
+      req.nextUrl.searchParams.get(RETURN_URL_PARAM) ?? req.nextUrl.searchParams.get(CALLBACK_URL_PARAM)
     return NextResponse.redirect(new URL(safeRedirect(returnUrl), req.url))
   }
 

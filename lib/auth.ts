@@ -1,8 +1,8 @@
 import NextAuth, { CredentialsSignin } from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
-import { authorizeCredentials, authorizeLoginCode } from '@/lib/auth/authorize'
+import { authorizeCredentials, authorizeLoginCode, authorizeAdminTwoFactor } from '@/lib/auth/authorize'
 import { AuthCodeError } from '@/lib/auth/errors'
-import { SESSION_MAX_AGE_SECONDS, SESSION_UPDATE_AGE_SECONDS } from '@/lib/constants'
+import { SESSION_MAX_AGE_SECONDS, SESSION_UPDATE_AGE_SECONDS, LOGIN_CODE_PROVIDER_ID, ADMIN_2FA_PROVIDER_ID } from '@/lib/constants'
 import authConfig from '@/auth.config'
 import type { AuthorizedUser } from '@/types/auth'
 
@@ -47,9 +47,15 @@ export const authOptions = {
     }),
     // USER — one-time code emailed to the address
     Credentials({
-      id: 'login-code',
+      id: LOGIN_CODE_PROVIDER_ID,
       credentials: { email: {}, code: {} },
       authorize: (credentials) => withSigninErrors(() => authorizeLoginCode(credentials)),
+    }),
+    // ADMIN/SUPERADMIN — second factor: challenge token (from verify-login-code) + password
+    Credentials({
+      id: ADMIN_2FA_PROVIDER_ID,
+      credentials: { email: {}, challengeToken: {}, password: {} },
+      authorize: (credentials) => withSigninErrors(() => authorizeAdminTwoFactor(credentials)),
     }),
   ],
 }
