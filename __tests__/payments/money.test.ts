@@ -24,4 +24,8 @@ describe('kopecksToString', () => {
     const [, decimals] = result.split('.')
     expect(decimals).toHaveLength(2)
   })
+
+  it('converts 0 kopecks to "0.00"', () => {
+    expect(kopecksToString(0)).toBe('0.00')
+  })
 })

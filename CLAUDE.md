@@ -116,6 +116,15 @@ pnpm exec vitest run __tests__/lib/utils.test.ts  # run a single test file
 - HTTP calls only via Axios instances in a dedicated `api/` layer
 - One component per file
 
+### Performance
+
+- **Default to Server Components.** Only add `'use client'` when the component genuinely needs browser APIs, event handlers, or React state/effects. Every unnecessary `'use client'` boundary adds to the JS bundle shipped to the user.
+- **Lazy-load heavy sections** with `next/dynamic` when they are below the fold, conditionally rendered, or not needed on the initial render.
+- **Never import server-only code into Client Components** (Prisma, `bcryptjs`, `nodemailer`, etc.). Keep the client bundle free of Node.js dependencies.
+- **Images** — always use `next/image`; add the `priority` prop on any image that is above the fold (hero, first card). Below-the-fold images get `loading="lazy"` by default from the component — do not override it.
+- **Animations** — animate only `transform` and `opacity`; never animate layout-affecting properties (`width`, `height`, `top`, `left`, `margin`, `padding`). Layout properties trigger a full recalculate → paint cycle on every frame.
+- **Prisma queries** — always `select` only the fields the caller needs. Never return a full model row when only two or three fields are used.
+
 ## Architecture
 
 - Components live in `components/`

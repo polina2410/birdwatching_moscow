@@ -46,4 +46,40 @@ describe('ensureUniqueSlug', () => {
     const slug = await ensureUniqueSlug('Прогулка в лесу', checkExists)
     expect(slug).toBe('progulka-v-lesu')
   })
+
+  it('returns "event" fallback for an empty string input', async () => {
+    const checkExists = vi.fn().mockResolvedValue(false)
+    const slug = await ensureUniqueSlug('', checkExists)
+    expect(slug).toBe('event')
+  })
+
+  it('returns "event" fallback when input contains only non-transliterable characters', async () => {
+    const checkExists = vi.fn().mockResolvedValue(false)
+    const slug = await ensureUniqueSlug('---', checkExists)
+    expect(slug).toBe('event')
+  })
+
+  it('collapses consecutive spaces into a single hyphen', async () => {
+    const checkExists = vi.fn().mockResolvedValue(false)
+    const slug = await ensureUniqueSlug('hello  world', checkExists)
+    expect(slug).toBe('hello-world')
+  })
+
+  it('returns an already-clean slug unchanged', async () => {
+    const checkExists = vi.fn().mockResolvedValue(false)
+    const slug = await ensureUniqueSlug('hello-world', checkExists)
+    expect(slug).toBe('hello-world')
+  })
+
+  it('transliterates ё → yo', async () => {
+    const checkExists = vi.fn().mockResolvedValue(false)
+    const slug = await ensureUniqueSlug('ёж', checkExists)
+    expect(slug).toBe('yozh')
+  })
+
+  it('transliterates щ → shch (multi-char Cyrillic mapping)', async () => {
+    const checkExists = vi.fn().mockResolvedValue(false)
+    const slug = await ensureUniqueSlug('Щука', checkExists)
+    expect(slug).toBe('shchuka')
+  })
 })

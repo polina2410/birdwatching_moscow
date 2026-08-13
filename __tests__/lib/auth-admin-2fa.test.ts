@@ -60,6 +60,12 @@ describe('authorizeAdminTwoFactor — success', () => {
       })
     )
   })
+
+  it('SUPERADMIN with valid challenge + correct password returns { role: "SUPERADMIN" }', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ ...ADMIN, role: 'SUPERADMIN' })
+    const result = await authorizeAdminTwoFactor({ email: ADMIN.email, challengeToken: 'tok', password: 'pass' })
+    expect(result).toMatchObject({ id: ADMIN.id, role: 'SUPERADMIN' })
+  })
 })
 
 // ── Null cases ───────────────────────────────────────────────────────────────
@@ -84,6 +90,13 @@ describe('authorizeAdminTwoFactor — null cases', () => {
 
   it('returns null for invalid/missing credentials schema', async () => {
     expect(await authorizeAdminTwoFactor({ email: 'bad' })).toBeNull()
+  })
+
+  it('returns null for a soft-deleted ADMIN (findFirst returns null with deletedAt:null filter)', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(null)
+    expect(
+      await authorizeAdminTwoFactor({ email: ADMIN.email, challengeToken: 'tok', password: 'pass' })
+    ).toBeNull()
   })
 })
 

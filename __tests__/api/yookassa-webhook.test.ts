@@ -65,6 +65,17 @@ describe('POST /api/payments/yookassa/webhook — IP allowlist', () => {
     const res = await POST(makeRequest(makeNotification(), BLOCKED_IP))
     expect(res.status).toBe(200)
   })
+
+  it('returns 403 when X-Real-IP header is absent', async () => {
+    const req = new Request('http://localhost/api/payments/yookassa/webhook', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(makeNotification()),
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(HTTP_STATUS_FORBIDDEN)
+    expect(applyPaymentResultMock).not.toHaveBeenCalled()
+  })
 })
 
 describe('POST /api/payments/yookassa/webhook — schema validation', () => {
@@ -114,6 +125,25 @@ describe('POST /api/payments/yookassa/webhook — payment.canceled', () => {
     expect(applyPaymentResultMock).toHaveBeenCalledWith(
       expect.objectContaining({ paymentId: 'pay-abc', status: 'canceled' })
     )
+  })
+})
+
+describe('POST /api/payments/yookassa/webhook — payment.waiting_for_capture', () => {
+  it('returns 200 but does not call applyPaymentResult', async () => {
+    const res = await POST(
+      makeRequest({
+        type: 'notification',
+        event: 'payment.waiting_for_capture',
+        object: {
+          id: 'pay-abc',
+          status: 'waiting_for_capture',
+          amount: { value: '1500.00', currency: 'RUB' },
+          metadata: { orderId: 'order-1' },
+        },
+      })
+    )
+    expect(res.status).toBe(200)
+    expect(applyPaymentResultMock).not.toHaveBeenCalled()
   })
 })
 

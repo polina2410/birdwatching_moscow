@@ -13,7 +13,7 @@ vi.mock('@/lib/mail', () => ({ sendMail: sendMailMock }))
 vi.mock('bcryptjs', () => ({ default: { hash: bcryptHashMock, compare: vi.fn() } }))
 
 import { POST } from '@/app/api/auth/register/route'
-import { HTTP_METHOD, JSON_HEADERS } from '@/lib/constants'
+import { HTTP_METHOD, JSON_HEADERS, HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_CONFLICT } from '@/lib/constants'
 
 function makeReq(body: object) {
   return new Request('http://localhost/api/auth/register', {
@@ -55,5 +55,35 @@ describe('POST /api/auth/register — passwordless USER', () => {
     // The schema no longer has a password field; extra fields trigger a strict parse failure OR
     // they're ignored — either way no bcrypt call and the password must not be stored
     expect(bcryptHashMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('POST /api/auth/register — validation', () => {
+  it('returns 400 for a missing email', async () => {
+    const res = await POST(makeReq({ name: 'Иван' }))
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
+    expect(prismaMock.user.create).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 for a missing name', async () => {
+    const res = await POST(makeReq({ email: 'new@test.com' }))
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
+    expect(prismaMock.user.create).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 for an invalid email format', async () => {
+    const res = await POST(makeReq({ email: 'not-an-email', name: 'Иван' }))
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
+    expect(prismaMock.user.create).not.toHaveBeenCalled()
+  })
+})
+
+describe('POST /api/auth/register — duplicate email', () => {
+  it('returns 409 when the email is already registered', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ id: 'existing-1', email: 'new@test.com' })
+    const res = await POST(makeReq({ email: 'new@test.com', name: 'Иван' }))
+    expect(res.status).toBe(HTTP_STATUS_CONFLICT)
+    expect(prismaMock.user.create).not.toHaveBeenCalled()
+    expect(sendMailMock).not.toHaveBeenCalled()
   })
 })

@@ -196,6 +196,40 @@ describe('POST /api/checkout — rate limit', () => {
   })
 })
 
+describe('POST /api/checkout — mixed active/expired cart', () => {
+  it('proceeds (200) when some cart items are expired and at least one is active', async () => {
+    const EXPIRED_ITEM = { id: 'cart-2', walkId: 'walk-1', quantity: 1, reservedUntil: PAST }
+    txMock.cartItem.findMany
+      .mockResolvedValueOnce([...CART_ITEMS, EXPIRED_ITEM]) // first call: full user cart
+      .mockResolvedValue(CART_ITEMS) // subsequent calls: only active items (per-walk seat count)
+    const res = await POST(makeRequest())
+    expect(res.status).toBe(200)
+  })
+
+  it('totalKopecks is computed from active items only', async () => {
+    const EXPIRED_ITEM = { id: 'cart-2', walkId: 'walk-1', quantity: 1, reservedUntil: PAST }
+    txMock.cartItem.findMany
+      .mockResolvedValueOnce([...CART_ITEMS, EXPIRED_ITEM])
+      .mockResolvedValue(CART_ITEMS)
+    await POST(makeRequest())
+    const createCall = txMock.order.create.mock.calls[0][0] as { data: { totalKopecks: number } }
+    // Active: 2 seats × 75000 = 150000; expired item must not be included
+    expect(createCall.data.totalKopecks).toBe(150000)
+  })
+})
+
+describe('POST /api/checkout — partial capacity exceeded', () => {
+  it('returns 409 CAPACITY_EXCEEDED when sold + cart seats exceed capacity but sold < capacity', async () => {
+    // walk capacity = 10; 8 already sold; user wants 3 more → 8+3=11 > 10
+    txMock.ticket.count.mockResolvedValue(8)
+    txMock.cartItem.findMany.mockResolvedValue([{ ...CART_ITEMS[0], quantity: 3 }])
+    const res = await POST(makeRequest())
+    expect(res.status).toBe(HTTP_STATUS_CONFLICT)
+    const body = await res.json()
+    expect(body.code).toBe('CAPACITY_EXCEEDED')
+  })
+})
+
 describe('POST /api/checkout — walk row locking (Bug 2 regression)', () => {
   it('acquires a FOR UPDATE lock on walk rows before the capacity check', async () => {
     await POST(makeRequest())
