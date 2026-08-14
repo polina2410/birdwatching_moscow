@@ -3,9 +3,10 @@ import { prisma } from '@/lib/prisma'
 import { verifyLoginCodeSchema } from '@/lib/validation/auth'
 import { hashLoginCode } from '@/lib/login-code'
 import { generateChallengeToken, hashChallengeToken } from '@/lib/auth/challenge'
-import { LOGIN_CODE_MAX_ATTEMPTS, ADMIN_CHALLENGE_TTL_MS, HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_TOO_MANY_REQUESTS } from '@/lib/constants'
+import { LOGIN_CODE_MAX_ATTEMPTS, ADMIN_CHALLENGE_TTL_MS, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_TOO_MANY_REQUESTS } from '@/lib/constants'
 import { validateRequest } from '@/lib/api/validate'
 import { checkRateLimit } from '@/lib/rateLimit'
+import { verifyLoginCsrfToken } from '@/lib/auth/csrf'
 
 const sessionResponse = () => NextResponse.json({ next: 'session' })
 
@@ -27,6 +28,11 @@ export async function POST(req: Request) {
   if (!result.success) return result.response
 
   const { email, code } = result.data
+
+  const csrfToken = req.headers.get('x-csrf-token')
+  if (!csrfToken || !verifyLoginCsrfToken(csrfToken, email)) {
+    return NextResponse.json({ error: 'invalid_csrf' }, { status: HTTP_STATUS_FORBIDDEN })
+  }
 
   const user = await prisma.user.findFirst({ where: { email, deletedAt: null } })
 
