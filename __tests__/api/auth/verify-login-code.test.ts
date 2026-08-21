@@ -6,6 +6,7 @@ const {
   hashChallengeTokenMock,
   hashLoginCodeMock,
   checkRateLimitMock,
+  verifyLoginCsrfTokenMock,
 } = vi.hoisted(() => ({
   prismaMock: {
     user: { findFirst: vi.fn() },
@@ -16,6 +17,7 @@ const {
   hashChallengeTokenMock: vi.fn().mockReturnValue('b'.repeat(64)),
   hashLoginCodeMock: vi.fn().mockReturnValue('a'.repeat(64)),
   checkRateLimitMock: vi.fn().mockResolvedValue({ allowed: true, retryAfterSeconds: 0 }),
+  verifyLoginCsrfTokenMock: vi.fn().mockReturnValue(true),
 }))
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
@@ -25,9 +27,10 @@ vi.mock('@/lib/auth/challenge', () => ({
 }))
 vi.mock('@/lib/login-code', () => ({ hashLoginCode: hashLoginCodeMock }))
 vi.mock('@/lib/rateLimit', () => ({ checkRateLimit: checkRateLimitMock }))
+vi.mock('@/lib/auth/csrf', () => ({ verifyLoginCsrfToken: verifyLoginCsrfTokenMock }))
 
 import { POST } from '@/app/api/auth/verify-login-code/route'
-import { LOGIN_CODE_MAX_ATTEMPTS, HTTP_METHOD, JSON_HEADERS, HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_TOO_MANY_REQUESTS } from '@/lib/constants'
+import { LOGIN_CODE_MAX_ATTEMPTS, HTTP_METHOD, JSON_HEADERS, HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_FORBIDDEN, HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_TOO_MANY_REQUESTS } from '@/lib/constants'
 
 const USER = {
   id: 'u1',
@@ -53,10 +56,10 @@ const ACTIVE_CODE = {
   attempts: 0,
 }
 
-function makeReq(body: object) {
+function makeReq(body: object, csrfHeader = 'mock-csrf-token') {
   return new Request('http://localhost/api/auth/verify-login-code', {
     method: HTTP_METHOD.POST,
-    headers: JSON_HEADERS,
+    headers: { ...JSON_HEADERS, ...(csrfHeader ? { 'X-CSRF-Token': csrfHeader } : {}) },
     body: JSON.stringify(body),
   })
 }
@@ -64,6 +67,7 @@ function makeReq(body: object) {
 beforeEach(() => {
   vi.clearAllMocks()
   checkRateLimitMock.mockResolvedValue({ allowed: true, retryAfterSeconds: 0 })
+  verifyLoginCsrfTokenMock.mockReturnValue(true)
   prismaMock.loginCode.update.mockResolvedValue({})
   prismaMock.adminLoginChallenge.create.mockResolvedValue({})
 })
@@ -248,5 +252,38 @@ describe('POST /api/auth/verify-login-code — validation', () => {
 
   it('returns 400 for invalid email format', async () => {
     expect((await POST(makeReq({ email: 'not-an-email', code: 'ABCD2F' }))).status).toBe(HTTP_STATUS_BAD_REQUEST)
+  })
+})
+
+// ── CSRF validation ──────────────────────────────────────────────────────────
+
+describe('POST /api/auth/verify-login-code — CSRF validation', () => {
+  beforeEach(() => prismaMock.user.findFirst.mockResolvedValue(null))
+
+  it('returns 403 when X-CSRF-Token header is absent', async () => {
+    const req = new Request('http://localhost/api/auth/verify-login-code', {
+      method: HTTP_METHOD.POST,
+      headers: JSON_HEADERS, // no X-CSRF-Token
+      body: JSON.stringify({ email: ADMIN.email, code: 'ABCD2F' }),
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(HTTP_STATUS_FORBIDDEN)
+  })
+
+  it('returns 403 when CSRF token is invalid', async () => {
+    verifyLoginCsrfTokenMock.mockReturnValue(false)
+    const res = await POST(makeReq({ email: ADMIN.email, code: 'ABCD2F' }))
+    expect(res.status).toBe(HTTP_STATUS_FORBIDDEN)
+  })
+
+  it('CSRF check happens after rate limit (rate limit still blocks on 429)', async () => {
+    checkRateLimitMock.mockResolvedValue({ allowed: false, retryAfterSeconds: 30 })
+    const req = new Request('http://localhost/api/auth/verify-login-code', {
+      method: HTTP_METHOD.POST,
+      headers: JSON_HEADERS, // no CSRF token
+      body: JSON.stringify({ email: ADMIN.email, code: 'ABCD2F' }),
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(HTTP_STATUS_TOO_MANY_REQUESTS)
   })
 })

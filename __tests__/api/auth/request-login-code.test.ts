@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { prismaMock, sendMailMock, generateLoginCodeMock, hashLoginCodeMock, checkRateLimitMock } = vi.hoisted(() => ({
+const {
+  prismaMock,
+  sendMailMock,
+  generateLoginCodeMock,
+  hashLoginCodeMock,
+  checkRateLimitMock,
+  generateLoginCsrfTokenMock,
+  trackEmailRequestPerIpMock,
+} = vi.hoisted(() => ({
   prismaMock: {
     user: { findFirst: vi.fn() },
     loginCode: { deleteMany: vi.fn(), create: vi.fn() },
@@ -9,11 +17,15 @@ const { prismaMock, sendMailMock, generateLoginCodeMock, hashLoginCodeMock, chec
   generateLoginCodeMock: vi.fn().mockReturnValue('ABCD2F'),
   hashLoginCodeMock: vi.fn().mockReturnValue('a'.repeat(64)),
   checkRateLimitMock: vi.fn().mockResolvedValue({ allowed: true, retryAfterSeconds: 0 }),
+  generateLoginCsrfTokenMock: vi.fn().mockReturnValue('mock-csrf-token'),
+  trackEmailRequestPerIpMock: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('@/lib/mail', () => ({ sendMail: sendMailMock }))
 vi.mock('@/lib/rateLimit', () => ({ checkRateLimit: checkRateLimitMock }))
+vi.mock('@/lib/auth/csrf', () => ({ generateLoginCsrfToken: generateLoginCsrfTokenMock }))
+vi.mock('@/lib/monitoring', () => ({ trackEmailRequestPerIp: trackEmailRequestPerIpMock }))
 vi.mock('@/lib/login-code', () => ({
   generateLoginCode: generateLoginCodeMock,
   hashLoginCode: hashLoginCodeMock,
@@ -47,6 +59,8 @@ beforeEach(() => {
   prismaMock.loginCode.create.mockResolvedValue({ id: 'code-1' })
   sendMailMock.mockResolvedValue(undefined)
   checkRateLimitMock.mockResolvedValue({ allowed: true, retryAfterSeconds: 0 })
+  generateLoginCsrfTokenMock.mockReturnValue('mock-csrf-token')
+  trackEmailRequestPerIpMock.mockResolvedValue(undefined)
 })
 
 describe('POST /api/auth/request-login-code — registered USER', () => {
@@ -147,5 +161,51 @@ describe('POST /api/auth/request-login-code — validation', () => {
   it('returns 400 for a missing email', async () => {
     const res = await POST(makeReq({}))
     expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
+  })
+})
+
+// ── CSRF token in response ───────────────────────────────────────────────────
+
+describe('POST /api/auth/request-login-code — CSRF token', () => {
+  it('includes csrfToken in the 200 response for a registered user', async () => {
+    const res = await POST(makeReq({ email: USER.email }))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.csrfToken).toBe('mock-csrf-token')
+  })
+
+  it('includes csrfToken even for an unknown email (anti-enumeration)', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(null)
+    const res = await POST(makeReq({ email: 'nobody@test.com' }))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.csrfToken).toBe('mock-csrf-token')
+  })
+
+  it('passes the email to generateLoginCsrfToken', async () => {
+    await POST(makeReq({ email: USER.email }))
+    expect(generateLoginCsrfTokenMock).toHaveBeenCalledWith(USER.email)
+  })
+})
+
+// ── Anomaly monitoring ───────────────────────────────────────────────────────
+
+describe('POST /api/auth/request-login-code — anomaly monitoring', () => {
+  it('calls trackEmailRequestPerIp with the client IP and email', async () => {
+    const res = await POST(
+      new Request('http://localhost/api/auth/request-login-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '10.0.0.1' },
+        body: JSON.stringify({ email: USER.email }),
+      })
+    )
+    expect(res.status).toBe(200)
+    expect(trackEmailRequestPerIpMock).toHaveBeenCalledWith('10.0.0.1', USER.email)
+  })
+
+  it('does not block the response when anomaly tracking fails', async () => {
+    trackEmailRequestPerIpMock.mockRejectedValue(new Error('Redis down'))
+    const res = await POST(makeReq({ email: USER.email }))
+    expect(res.status).toBe(200)
   })
 })

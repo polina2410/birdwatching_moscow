@@ -56,7 +56,6 @@ model User {
 
   orders               Order[]
   tickets              Ticket[]
-  cartItems            CartItem[]
   publishedWalks       Walk[]               @relation("WalkPublisher")
   publishedExpeditions Expedition[]         @relation("ExpeditionPublisher")
   passwordResetTokens  PasswordResetToken[]
@@ -85,7 +84,6 @@ model Walk {
   guide      TeamMember  @relation(fields: [guideId], references: [id])
   publisher  User?       @relation("WalkPublisher", fields: [publishedBy], references: [id])
   tickets    Ticket[]
-  cartItems  CartItem[]
   orderItems OrderItem[]
 
   @@index([status, startsAt])
@@ -190,20 +188,6 @@ model Ticket {
   @@index([userId])
 }
 
-model CartItem {
-  id            String   @id @default(uuid())
-  userId        String
-  walkId        String
-  quantity      Int
-  // Set by app to now + 20 min. Active reservation = reservedUntil > now; expired rows filtered lazily on read.
-  reservedUntil DateTime
-  createdAt     DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id])
-  walk Walk @relation(fields: [walkId], references: [id])
-
-  @@index([reservedUntil])
-}
 
 model PasswordResetToken {
   id        String    @id @default(uuid())

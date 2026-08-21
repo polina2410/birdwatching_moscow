@@ -1,4 +1,4 @@
-export type CheckoutErrorCode = 'CART_EMPTY' | 'CART_EXPIRED' | 'CAPACITY_EXCEEDED'
+export type CheckoutErrorCode = 'CAPACITY_EXCEEDED'
 
 export interface WalkSnapshot {
   id: string

@@ -6,6 +6,8 @@ import { sendMail } from '@/lib/mail'
 import { LOGIN_CODE_TTL_MS, HTTP_STATUS_TOO_MANY_REQUESTS } from '@/lib/constants'
 import { validateRequest } from '@/lib/api/validate'
 import { checkRateLimit } from '@/lib/rateLimit'
+import { generateLoginCsrfToken } from '@/lib/auth/csrf'
+import { trackEmailRequestPerIp } from '@/lib/monitoring'
 
 // Byte-identical for unknown, privileged, blocked and soft-deleted accounts —
 // anything else would turn this endpoint into an email-enumeration oracle.
@@ -31,6 +33,10 @@ export async function POST(req: Request) {
   }
 
   const { email } = result.data
+
+  trackEmailRequestPerIp(ip, email).catch((err) =>
+    console.error('[monitoring] trackEmailRequestPerIp failed', err)
+  )
 
   try {
     const user = await prisma.user.findFirst({
@@ -65,5 +71,12 @@ export async function POST(req: Request) {
     console.error('POST /api/auth/request-login-code failed', err)
   }
 
-  return NextResponse.json(SAFE_RESPONSE)
+  let csrfToken: string | undefined
+  try {
+    csrfToken = generateLoginCsrfToken(email)
+  } catch (err) {
+    console.error('[auth] csrf token generation failed', err)
+  }
+
+  return NextResponse.json({ ...SAFE_RESPONSE, csrfToken })
 }
