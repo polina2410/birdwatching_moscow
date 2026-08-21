@@ -1,15 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { authMock, walkMock, ticketMock, cartItemMock } = vi.hoisted(() => ({
+const { authMock, walkMock, ticketMock } = vi.hoisted(() => ({
   authMock: vi.fn(),
   walkMock: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
   ticketMock: { count: vi.fn() },
-  cartItemMock: { aggregate: vi.fn() },
 }))
 
 vi.mock('@/lib/auth', () => ({ auth: authMock }))
 vi.mock('@/lib/prisma', () => ({
-  prisma: { walk: walkMock, ticket: ticketMock, cartItem: cartItemMock },
+  prisma: { walk: walkMock, ticket: ticketMock },
 }))
 
 import {
@@ -99,14 +98,12 @@ describe('deleteWalk', () => {
   it('throws when ticket count is greater than 0', async () => {
     walkMock.findFirst.mockResolvedValue({ id: 'walk-1', status: 'DRAFT' })
     ticketMock.count.mockResolvedValue(1)
-    cartItemMock.aggregate.mockResolvedValue({ _count: { id: 0 }, _max: { reservedUntil: null } })
     await expect(deleteWalk('walk-1')).rejects.toThrow(/проданными билетами/)
   })
 
-  it('calls walk.update with status DELETED when no tickets and no active cart items', async () => {
+  it('calls walk.update with status DELETED when no tickets sold', async () => {
     walkMock.findFirst.mockResolvedValue({ id: 'walk-1', status: 'DRAFT' })
     ticketMock.count.mockResolvedValue(0)
-    cartItemMock.aggregate.mockResolvedValue({ _count: { id: 0 }, _max: { reservedUntil: null } })
     walkMock.update.mockResolvedValue({ id: 'walk-1', status: 'DELETED' })
     await deleteWalk('walk-1')
     expect(walkMock.update).toHaveBeenCalledWith(
@@ -153,18 +150,6 @@ describe('cancelWalk', () => {
   })
 })
 
-describe('deleteWalk — active cart branch', () => {
-  it('throws with /бронирования/ when active cart items exist', async () => {
-    const futureTime = new Date(Date.now() + 30 * 60 * 1000)
-    walkMock.findFirst.mockResolvedValue({ id: 'walk-1', status: 'DRAFT' })
-    ticketMock.count.mockResolvedValue(0)
-    cartItemMock.aggregate.mockResolvedValue({
-      _count: { id: 1 },
-      _max: { reservedUntil: futureTime },
-    })
-    await expect(deleteWalk('walk-1')).rejects.toThrow(/бронирования/)
-  })
-})
 
 describe('restoreWalk', () => {
   it('throws when startsAt is in the past and no newStartsAt is provided', async () => {

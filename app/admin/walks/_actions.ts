@@ -119,16 +119,5 @@ export async function deleteWalk(id: string): Promise<void> {
     throw new Error('Нельзя удалить прогулку с проданными билетами.')
   }
 
-  const cartResult = await prisma.cartItem.aggregate({
-    where: { walkId: id, reservedUntil: { gt: new Date() } },
-    _count: { id: true },
-    _max: { reservedUntil: true },
-  })
-  if (cartResult._count.id > 0) {
-    const until = cartResult._max.reservedUntil
-    const time = until ? until.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '?'
-    throw new Error(`Нельзя удалить прогулку: есть активные бронирования до ${time}. Попробуйте позже.`)
-  }
-
   await prisma.walk.update({ where: { id }, data: { status: 'DELETED' } })
 }

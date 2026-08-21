@@ -7,7 +7,6 @@ const { authMock, checkRateLimitMock, createPaymentMock } = vi.hoisted(() => ({
 }))
 
 const txMock = {
-  cartItem: { findMany: vi.fn(), deleteMany: vi.fn() },
   walk: { findMany: vi.fn() },
   ticket: { count: vi.fn() },
   orderItem: { findMany: vi.fn() },
@@ -24,17 +23,22 @@ vi.mock('@/lib/rateLimit', () => ({ checkRateLimit: checkRateLimitMock }))
 vi.mock('@/lib/payments/yookassa', () => ({ createPayment: createPaymentMock }))
 
 import { POST } from '@/app/api/checkout/route'
-import { HTTP_METHOD, JSON_HEADERS, HTTP_STATUS_CONFLICT, HTTP_STATUS_UNAUTHORIZED, HTTP_STATUS_TOO_MANY_REQUESTS, HTTP_STATUS_BAD_GATEWAY } from '@/lib/constants'
+import {
+  HTTP_METHOD,
+  JSON_HEADERS,
+  HTTP_STATUS_BAD_REQUEST,
+  HTTP_STATUS_CONFLICT,
+  HTTP_STATUS_UNAUTHORIZED,
+  HTTP_STATUS_TOO_MANY_REQUESTS,
+  HTTP_STATUS_BAD_GATEWAY,
+} from '@/lib/constants'
 
 const SESSION = { user: { id: 'user-1', email: 'a@test.com', name: 'A', role: 'USER' } }
-const WALK = { id: 'walk-1', title: 'Лесная прогулка', priceKopecks: 75000, capacity: 10 }
-const NOW = new Date()
-const FUTURE = new Date(NOW.getTime() + 20 * 60 * 1000)
-const PAST = new Date(NOW.getTime() - 1)
-const CART_ITEMS = [{ id: 'cart-1', walkId: 'walk-1', quantity: 2, reservedUntil: FUTURE }]
+const WALK_ID = '00000000-0000-4000-8000-000000000000'
+const WALK = { id: WALK_ID, title: 'Лесная прогулка', priceKopecks: 75000, capacity: 10 }
 const ORDER = { id: 'order-1', totalKopecks: 150000, status: 'PENDING', yooKassaPaymentId: null }
 
-function makeRequest(body = {}) {
+function makeRequest(body: Record<string, unknown> = { walkId: WALK_ID, quantity: 2 }) {
   return new Request('http://localhost/api/checkout', {
     method: HTTP_METHOD.POST,
     headers: JSON_HEADERS,
@@ -46,14 +50,12 @@ beforeEach(() => {
   vi.clearAllMocks()
   authMock.mockResolvedValue(SESSION)
   checkRateLimitMock.mockResolvedValue({ allowed: true, retryAfterSeconds: 0 })
-  txMock.cartItem.findMany.mockResolvedValue(CART_ITEMS)
   txMock.walk.findMany.mockResolvedValue([WALK])
   txMock.ticket.count.mockResolvedValue(0)
   txMock.orderItem.findMany.mockResolvedValue([])
   txMock.order.create.mockResolvedValue(ORDER)
   txMock.order.findFirst.mockResolvedValue(null)
   txMock.order.update.mockResolvedValue({ ...ORDER, status: 'AWAITING_PAYMENT', yooKassaPaymentId: 'pay-abc' })
-  txMock.cartItem.deleteMany.mockResolvedValue({ count: 1 })
   txMock.$executeRaw.mockResolvedValue(undefined)
   createPaymentMock.mockResolvedValue({
     id: 'pay-abc',
@@ -70,28 +72,41 @@ describe('POST /api/checkout — auth', () => {
   })
 })
 
-describe('POST /api/checkout — cart validation', () => {
-  it('returns 409 CART_EMPTY when user has no cart items', async () => {
-    txMock.cartItem.findMany.mockResolvedValue([])
-    const res = await POST(makeRequest())
-    expect(res.status).toBe(HTTP_STATUS_CONFLICT)
-    const body = await res.json()
-    expect(body.code).toBe('CART_EMPTY')
+describe('POST /api/checkout — request validation', () => {
+  it('returns 400 when walkId is missing', async () => {
+    const res = await POST(makeRequest({ quantity: 1 }))
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
   })
 
-  it('returns 409 CART_EXPIRED when all cart items are expired', async () => {
-    txMock.cartItem.findMany.mockResolvedValue([
-      { ...CART_ITEMS[0], reservedUntil: PAST },
-    ])
-    const res = await POST(makeRequest())
-    expect(res.status).toBe(HTTP_STATUS_CONFLICT)
-    const body = await res.json()
-    expect(body.code).toBe('CART_EXPIRED')
+  it('returns 400 when quantity is missing', async () => {
+    const res = await POST(makeRequest({ walkId: WALK_ID }))
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
   })
 
-  it('returns 409 CAPACITY_EXCEEDED when walk is oversubscribed', async () => {
-    // walk has capacity 10, 10 tickets already sold
+  it('returns 400 when quantity is 0', async () => {
+    const res = await POST(makeRequest({ walkId: WALK_ID, quantity: 0 }))
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
+  })
+
+  it('returns 400 when walkId is not a valid uuid', async () => {
+    const res = await POST(makeRequest({ walkId: 'not-a-uuid', quantity: 1 }))
+    expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST)
+  })
+})
+
+describe('POST /api/checkout — capacity', () => {
+  it('returns 409 CAPACITY_EXCEEDED when walk is fully sold out', async () => {
     txMock.ticket.count.mockResolvedValue(10)
+    const res = await POST(makeRequest())
+    expect(res.status).toBe(HTTP_STATUS_CONFLICT)
+    const body = await res.json()
+    expect(body.code).toBe('CAPACITY_EXCEEDED')
+  })
+
+  it('returns 409 CAPACITY_EXCEEDED when sold + order seats + quantity exceeds capacity', async () => {
+    // capacity=10, 8 sold, 1 in active order, user wants 2 → 8+1+2=11 > 10
+    txMock.ticket.count.mockResolvedValue(8)
+    txMock.orderItem.findMany.mockResolvedValue([{ quantity: 1 }])
     const res = await POST(makeRequest())
     expect(res.status).toBe(HTTP_STATUS_CONFLICT)
     const body = await res.json()
@@ -117,11 +132,9 @@ describe('POST /api/checkout — happy path', () => {
     expect(diffMs).toBeLessThan(21 * 60 * 1000)
   })
 
-  it('computes totalKopecks from DB — not from request body', async () => {
-    // client sends wrong prices; server must compute from Walk.priceKopecks
-    const res = await POST(makeRequest({ totalKopecks: 0, priceKopecks: 0 }))
+  it('computes totalKopecks from DB walk price — not from request body', async () => {
+    const res = await POST(makeRequest({ walkId: WALK_ID, quantity: 2, totalKopecks: 0 }))
     expect(res.status).toBe(200)
-
     const createCall = txMock.order.create.mock.calls[0][0] as {
       data: { totalKopecks: number }
     }
@@ -129,14 +142,7 @@ describe('POST /api/checkout — happy path', () => {
     expect(createCall.data.totalKopecks).toBe(150000)
   })
 
-  it('deletes cart items inside the same transaction', async () => {
-    await POST(makeRequest())
-    expect(txMock.cartItem.deleteMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ userId: 'user-1' }) })
-    )
-  })
-
-  it('calls createPayment with Idempotence-Key equal to order.id', async () => {
+  it('calls createPayment with idempotence key equal to order.id', async () => {
     await POST(makeRequest())
     expect(createPaymentMock).toHaveBeenCalledWith(
       expect.objectContaining({ idempotenceKey: 'order-1' })
@@ -168,6 +174,11 @@ describe('POST /api/checkout — happy path', () => {
     const call = createPaymentMock.mock.calls[0][0] as { description: string }
     expect(call.description.length).toBeLessThanOrEqual(128)
   })
+
+  it('acquires a FOR UPDATE lock on the walk row before the capacity check', async () => {
+    await POST(makeRequest())
+    expect(txMock.$executeRaw).toHaveBeenCalled()
+  })
 })
 
 describe('POST /api/checkout — provider failure', () => {
@@ -180,7 +191,6 @@ describe('POST /api/checkout — provider failure', () => {
   it('order stays PENDING with null yooKassaPaymentId on provider failure', async () => {
     createPaymentMock.mockRejectedValue(new Error('Timeout'))
     await POST(makeRequest())
-    // order.update to AWAITING_PAYMENT must NOT have been called
     const awaitingCall = (txMock.order.update.mock.calls as Array<[{ data: { status?: string } }]>).find(
       ([args]) => args?.data?.status === 'AWAITING_PAYMENT'
     )
@@ -193,58 +203,5 @@ describe('POST /api/checkout — rate limit', () => {
     checkRateLimitMock.mockResolvedValue({ allowed: false, retryAfterSeconds: 30 })
     const res = await POST(makeRequest())
     expect(res.status).toBe(HTTP_STATUS_TOO_MANY_REQUESTS)
-  })
-})
-
-describe('POST /api/checkout — mixed active/expired cart', () => {
-  it('proceeds (200) when some cart items are expired and at least one is active', async () => {
-    const EXPIRED_ITEM = { id: 'cart-2', walkId: 'walk-1', quantity: 1, reservedUntil: PAST }
-    txMock.cartItem.findMany
-      .mockResolvedValueOnce([...CART_ITEMS, EXPIRED_ITEM]) // first call: full user cart
-      .mockResolvedValue(CART_ITEMS) // subsequent calls: only active items (per-walk seat count)
-    const res = await POST(makeRequest())
-    expect(res.status).toBe(200)
-  })
-
-  it('totalKopecks is computed from active items only', async () => {
-    const EXPIRED_ITEM = { id: 'cart-2', walkId: 'walk-1', quantity: 1, reservedUntil: PAST }
-    txMock.cartItem.findMany
-      .mockResolvedValueOnce([...CART_ITEMS, EXPIRED_ITEM])
-      .mockResolvedValue(CART_ITEMS)
-    await POST(makeRequest())
-    const createCall = txMock.order.create.mock.calls[0][0] as { data: { totalKopecks: number } }
-    // Active: 2 seats × 75000 = 150000; expired item must not be included
-    expect(createCall.data.totalKopecks).toBe(150000)
-  })
-})
-
-describe('POST /api/checkout — partial capacity exceeded', () => {
-  it('returns 409 CAPACITY_EXCEEDED when sold + cart seats exceed capacity but sold < capacity', async () => {
-    // walk capacity = 10; 8 already sold; user wants 3 more → 8+3=11 > 10
-    txMock.ticket.count.mockResolvedValue(8)
-    txMock.cartItem.findMany.mockResolvedValue([{ ...CART_ITEMS[0], quantity: 3 }])
-    const res = await POST(makeRequest())
-    expect(res.status).toBe(HTTP_STATUS_CONFLICT)
-    const body = await res.json()
-    expect(body.code).toBe('CAPACITY_EXCEEDED')
-  })
-})
-
-describe('POST /api/checkout — walk row locking (Bug 2 regression)', () => {
-  it('acquires a FOR UPDATE lock on walk rows before the capacity check', async () => {
-    await POST(makeRequest())
-    expect(txMock.$executeRaw).toHaveBeenCalled()
-  })
-
-  it('does not attempt to lock walk rows when the cart is empty', async () => {
-    txMock.cartItem.findMany.mockResolvedValue([])
-    await POST(makeRequest())
-    expect(txMock.$executeRaw).not.toHaveBeenCalled()
-  })
-
-  it('does not attempt to lock walk rows when all cart items are expired', async () => {
-    txMock.cartItem.findMany.mockResolvedValue([{ ...CART_ITEMS[0], reservedUntil: PAST }])
-    await POST(makeRequest())
-    expect(txMock.$executeRaw).not.toHaveBeenCalled()
   })
 })

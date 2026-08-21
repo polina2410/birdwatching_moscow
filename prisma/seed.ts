@@ -10,7 +10,6 @@ const prisma = new PrismaClient({ adapter })
 async function main() {
   // Clear in FK-safe order so the script is safe to re-run
   await prisma.request.deleteMany()
-  await prisma.cartItem.deleteMany()
   await prisma.ticket.deleteMany()
   await prisma.orderItem.deleteMany()
   await prisma.order.deleteMany()

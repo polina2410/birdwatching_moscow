@@ -89,15 +89,6 @@ describe('Ticket FK rename: eventId → walkId', () => {
   })
 })
 
-describe('CartItem FK rename: eventId → walkId', () => {
-  it('CartItem has walkId field', () => {
-    expect((Prisma.CartItemScalarFieldEnum as Record<string, unknown>).walkId).toBe('walkId')
-  })
-
-  it('CartItem does not have eventId field', () => {
-    expect((Prisma.CartItemScalarFieldEnum as Record<string, unknown>).eventId).toBeUndefined()
-  })
-})
 
 describe('ExpeditionDay FK rename: eventId → expeditionId', () => {
   it('ExpeditionDay has expeditionId field', () => {
