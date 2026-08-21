@@ -23,8 +23,6 @@ export const expeditionDaySchema = z.object({
   description: z.string().max(MAX_DESCRIPTION),
 })
 
-export type ExpeditionDayInput = z.infer<typeof expeditionDaySchema>
-
 // ─── Events ───────────────────────────────────────────────────────────────────
 
 const galleryUrlItem = z.string().url().max(MAX_URL)

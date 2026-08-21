@@ -3,7 +3,7 @@ export const AUTH_ERRORS = {
   generic:        'Что-то пошло не так. Попробуйте ещё раз.',
   emailTaken:     'Этот email уже зарегистрирован.',
   wrongCredentials: 'Неверный email или пароль.',
-  accountBlocked: 'Ваш аккаунт заблокирован. Обратитесь к администратору.',
+  accountBlocked: 'Ваш аккаунт заблокирован.',
   invalidCode:      'Неверный или устаревший код.',
   invalidChallenge: 'Сессия истекла. Начните вход заново.',
   passwordResetRequired: 'Пароль устарел. Запросите сброс пароля.',

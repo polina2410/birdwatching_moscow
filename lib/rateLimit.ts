@@ -1,29 +1,24 @@
-import { redis } from './redis'
-
-const WINDOW = 60
+const WINDOW_MS = 60_000
 const MAX_REQUESTS = 2
 
-export async function checkRateLimit(key: string): Promise<{
-  allowed: boolean
-  retryAfterSeconds: number
-}> {
-  const redisKey = `rate_limit:${key}`
+const store = new Map<string, { count: number; expiresAt: number }>()
 
-  const current = await redis.incr(redisKey)
+export function _resetStoreForTesting(): void {
+  store.clear()
+}
 
-  // Set the expiry only on the first request so the window is fixed from that
-  // point — not sliding. Calling expire on every request (including blocked ones)
-  // would let a retrying client extend the window indefinitely.
-  if (current === 1) {
-    await redis.expire(redisKey, WINDOW)
+export function checkRateLimit(key: string): { allowed: boolean; retryAfterSeconds: number } {
+  const now = Date.now()
+  const entry = store.get(key)
+
+  if (!entry || entry.expiresAt <= now) {
+    store.set(key, { count: 1, expiresAt: now + WINDOW_MS })
+    return { allowed: true, retryAfterSeconds: 0 }
   }
 
-  if (current > MAX_REQUESTS) {
-    const ttl = await redis.ttl(redisKey)
-    return {
-      allowed: false,
-      retryAfterSeconds: ttl > 0 ? ttl : WINDOW,
-    }
+  entry.count++
+  if (entry.count > MAX_REQUESTS) {
+    return { allowed: false, retryAfterSeconds: Math.ceil((entry.expiresAt - now) / 1000) }
   }
 
   return { allowed: true, retryAfterSeconds: 0 }

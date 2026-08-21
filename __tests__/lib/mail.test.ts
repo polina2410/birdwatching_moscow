@@ -35,7 +35,7 @@ describe('sendMail — welcome', () => {
     expect(sendMailSpy).toHaveBeenCalledTimes(1)
     const call = sendMailSpy.mock.calls[0][0] as { to: string; subject: string; html: string }
     expect(call.to).toBe('newuser@example.com')
-    expect(call.subject).toBe('Добро пожаловать в Птицы Москвы!')
+    expect(call.subject).toBe('Добро пожаловать в Birdwatching Moscow!')
     expect(call.html).toContain('Иван')
   })
 })

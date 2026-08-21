@@ -18,7 +18,7 @@ export function normalizeLoginCode(raw: string): string {
   return raw.replace(/[\s-]/g, '').toUpperCase()
 }
 
-/** SHA-256 hex of the normalized code — only this is ever persisted. */
+/** SHA-256 hex of the normalised code — only this is ever persisted. */
 export function hashLoginCode(raw: string): string {
   return crypto.createHash('sha256').update(normalizeLoginCode(raw)).digest('hex')
 }

@@ -1,91 +1,84 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-
-const { redisMock } = vi.hoisted(() => ({
-  redisMock: {
-    incr: vi.fn(),
-    expire: vi.fn().mockResolvedValue(1),
-    ttl: vi.fn().mockResolvedValue(30),
-  },
-}))
-
-vi.mock('@/lib/redis', () => ({ redis: redisMock }))
-
-import { checkRateLimit } from '@/lib/rateLimit'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { checkRateLimit, _resetStoreForTesting } from '@/lib/rateLimit'
 
 beforeEach(() => {
-  vi.clearAllMocks()
-  redisMock.expire.mockResolvedValue(1)
-  redisMock.ttl.mockResolvedValue(30)
+  _resetStoreForTesting()
+  vi.useRealTimers()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('checkRateLimit — allowed requests', () => {
-  it('returns allowed: true for the first request in the window', async () => {
-    redisMock.incr.mockResolvedValue(1)
-    const result = await checkRateLimit('user-1')
-    expect(result).toEqual({ allowed: true, retryAfterSeconds: 0 })
+  it('returns allowed: true for the first request in the window', () => {
+    expect(checkRateLimit('user-1')).toEqual({ allowed: true, retryAfterSeconds: 0 })
   })
 
-  it('returns allowed: true at MAX_REQUESTS (second request)', async () => {
-    redisMock.incr.mockResolvedValue(2)
-    const result = await checkRateLimit('user-1')
-    expect(result).toEqual({ allowed: true, retryAfterSeconds: 0 })
+  it('returns allowed: true at MAX_REQUESTS (second request)', () => {
+    checkRateLimit('user-1')
+    expect(checkRateLimit('user-1')).toEqual({ allowed: true, retryAfterSeconds: 0 })
   })
 })
 
 describe('checkRateLimit — blocked requests', () => {
-  it('returns allowed: false with retryAfterSeconds from TTL when over the limit', async () => {
-    redisMock.incr.mockResolvedValue(3)
-    redisMock.ttl.mockResolvedValue(45)
-    const result = await checkRateLimit('user-1')
-    expect(result).toEqual({ allowed: false, retryAfterSeconds: 45 })
+  it('returns allowed: false with a positive retryAfterSeconds when over the limit', () => {
+    checkRateLimit('user-1')
+    checkRateLimit('user-1')
+    const result = checkRateLimit('user-1')
+    expect(result.allowed).toBe(false)
+    expect(result.retryAfterSeconds).toBeGreaterThan(0)
+    expect(result.retryAfterSeconds).toBeLessThanOrEqual(60)
   })
 
-  it('falls back to WINDOW seconds when TTL is negative (key has no expiry)', async () => {
-    redisMock.incr.mockResolvedValue(3)
-    redisMock.ttl.mockResolvedValue(-1)
-    const result = await checkRateLimit('user-1')
-    expect(result).toEqual({ allowed: false, retryAfterSeconds: 60 })
+  it('retryAfterSeconds decreases as time passes within the window', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+    checkRateLimit('user-1')
+    checkRateLimit('user-1')
+    checkRateLimit('user-1') // blocked
+
+    vi.setSystemTime(10_000)
+    const result = checkRateLimit('user-1')
+    expect(result.allowed).toBe(false)
+    expect(result.retryAfterSeconds).toBeLessThanOrEqual(50)
   })
 })
 
-describe('checkRateLimit — fixed window TTL (Bug 4 regression)', () => {
-  it('calls redis.expire once on the first request with the correct window', async () => {
-    redisMock.incr.mockResolvedValue(1)
-    await checkRateLimit('user-1')
-    expect(redisMock.expire).toHaveBeenCalledTimes(1)
-    expect(redisMock.expire).toHaveBeenCalledWith('rate_limit:user-1', 60)
+describe('checkRateLimit — fixed window (regression)', () => {
+  it('a blocked client retrying repeatedly does not extend the window', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+
+    checkRateLimit('user-1')
+    checkRateLimit('user-1')
+    for (let i = 0; i < 10; i++) checkRateLimit('user-1') // blocked repeatedly
+
+    vi.setSystemTime(60_001)
+    expect(checkRateLimit('user-1')).toEqual({ allowed: true, retryAfterSeconds: 0 })
   })
 
-  it('does not call redis.expire on the second (allowed) request', async () => {
-    redisMock.incr.mockResolvedValue(2)
-    await checkRateLimit('user-1')
-    expect(redisMock.expire).not.toHaveBeenCalled()
+  it('counter resets after window expiry', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+
+    checkRateLimit('user-1')
+    checkRateLimit('user-1')
+    expect(checkRateLimit('user-1').allowed).toBe(false)
+
+    vi.setSystemTime(60_001)
+    expect(checkRateLimit('user-1')).toEqual({ allowed: true, retryAfterSeconds: 0 })
+    expect(checkRateLimit('user-1')).toEqual({ allowed: true, retryAfterSeconds: 0 })
+    expect(checkRateLimit('user-1').allowed).toBe(false)
   })
+})
 
-  it('does not call redis.expire on a blocked request', async () => {
-    redisMock.incr.mockResolvedValue(3)
-    redisMock.ttl.mockResolvedValue(45)
-    await checkRateLimit('user-1')
-    expect(redisMock.expire).not.toHaveBeenCalled()
-  })
+describe('checkRateLimit — key isolation', () => {
+  it('different keys have independent counters', () => {
+    checkRateLimit('user-1')
+    checkRateLimit('user-1')
+    checkRateLimit('user-1') // user-1 blocked
 
-  it('a blocked client retrying repeatedly does not reset the TTL', async () => {
-    redisMock.incr
-      .mockResolvedValueOnce(3)
-      .mockResolvedValueOnce(4)
-      .mockResolvedValueOnce(5)
-    redisMock.ttl.mockResolvedValue(40)
-
-    await checkRateLimit('user-1')
-    await checkRateLimit('user-1')
-    await checkRateLimit('user-1')
-
-    expect(redisMock.expire).not.toHaveBeenCalled()
-  })
-
-  it('uses a key namespaced by the caller-supplied key', async () => {
-    redisMock.incr.mockResolvedValue(1)
-    await checkRateLimit('custom-key')
-    expect(redisMock.expire).toHaveBeenCalledWith('rate_limit:custom-key', expect.any(Number))
+    expect(checkRateLimit('user-2')).toEqual({ allowed: true, retryAfterSeconds: 0 })
   })
 })

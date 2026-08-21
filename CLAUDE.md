@@ -140,13 +140,20 @@ pnpm exec vitest run __tests__/lib/utils.test.ts  # run a single test file
 - One component per file
 - No prop drilling beyond 2 levels — use context or lift state
 
+## Payments
+
+Checkout uses the **ЮKassa widget** for payment confirmation (not a redirect to a hosted page).
+Docs: https://yookassa.ru/developers/payment-acceptance/integration-scenarios/widget/basics
+
 ## Infrastructure
+
+> Service setup, credentials, and local dev instructions: [`dev/infrastructure.md`](dev/infrastructure.md)
 
 Deployed on **Selectel VPS** (not Vercel/serverless). Implications:
 
 - No function timeout constraints — long-running server tasks are fine
 - **Ticket concurrency** — wrap purchases in Prisma transactions with row-level locks to prevent double-booking under simultaneous requests
-- **Certificate generation (stage 2)** — implement as a background job queue (e.g. BullMQ + Redis) running as a separate process on the same VPS; do not block the HTTP response
+- **Certificate generation (stage 2)** — generate via Puppeteer using fire-and-forget (`generateCertificate(orderId).catch(...)`) so the HTTP response is not blocked; no job queue needed
 - **Auth** — database sessions via NextAuth.js v5 (Auth.js) with the Prisma adapter (`strategy: "database"`); sessions stored in PostgreSQL for instant revocation; secrets in `.env` only, never committed
 
 ## Testing

@@ -1,66 +1,76 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-
-const { redisMock } = vi.hoisted(() => ({
-  redisMock: {
-    sadd: vi.fn(),
-    scard: vi.fn(),
-    ttl: vi.fn(),
-    expire: vi.fn(),
-  },
-}))
-
-vi.mock('@/lib/redis', () => ({ redis: redisMock }))
-
-import { trackEmailRequestPerIp } from '@/lib/monitoring'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { trackEmailRequestPerIp, _resetStoreForTesting } from '@/lib/monitoring'
 
 beforeEach(() => {
-  vi.clearAllMocks()
+  _resetStoreForTesting()
   vi.spyOn(console, 'warn').mockImplementation(() => {})
-  redisMock.sadd.mockResolvedValue(1)
-  redisMock.scard.mockResolvedValue(1)
-  redisMock.ttl.mockResolvedValue(-1)
-  redisMock.expire.mockResolvedValue(1)
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.useRealTimers()
 })
 
 describe('trackEmailRequestPerIp', () => {
   it('does nothing for ip "unknown"', async () => {
     await trackEmailRequestPerIp('unknown', 'user@test.com')
-    expect(redisMock.sadd).not.toHaveBeenCalled()
-  })
-
-  it('adds the email to the correct Redis set key', async () => {
-    await trackEmailRequestPerIp('1.2.3.4', 'user@test.com')
-    expect(redisMock.sadd).toHaveBeenCalledWith('anomaly:emails:1.2.3.4', 'user@test.com')
-  })
-
-  it('sets expiry when the key has no TTL (ttl === -1)', async () => {
-    redisMock.ttl.mockResolvedValue(-1)
-    await trackEmailRequestPerIp('1.2.3.4', 'user@test.com')
-    expect(redisMock.expire).toHaveBeenCalled()
-  })
-
-  it('does not reset expiry when the key already has a TTL', async () => {
-    redisMock.ttl.mockResolvedValue(300)
-    await trackEmailRequestPerIp('1.2.3.4', 'user@test.com')
-    expect(redisMock.expire).not.toHaveBeenCalled()
+    expect(console.warn).not.toHaveBeenCalled()
   })
 
   it('does not warn when distinct email count is below the threshold', async () => {
-    redisMock.scard.mockResolvedValue(4)
-    await trackEmailRequestPerIp('1.2.3.4', 'user@test.com')
+    await trackEmailRequestPerIp('1.2.3.4', 'a@test.com')
+    await trackEmailRequestPerIp('1.2.3.4', 'b@test.com')
+    await trackEmailRequestPerIp('1.2.3.4', 'c@test.com')
+    await trackEmailRequestPerIp('1.2.3.4', 'd@test.com')
     expect(console.warn).not.toHaveBeenCalled()
   })
 
   it('warns when distinct email count reaches the threshold (5)', async () => {
-    redisMock.scard.mockResolvedValue(5)
-    await trackEmailRequestPerIp('1.2.3.4', 'user@test.com')
+    await trackEmailRequestPerIp('1.2.3.4', 'a@test.com')
+    await trackEmailRequestPerIp('1.2.3.4', 'b@test.com')
+    await trackEmailRequestPerIp('1.2.3.4', 'c@test.com')
+    await trackEmailRequestPerIp('1.2.3.4', 'd@test.com')
+    await trackEmailRequestPerIp('1.2.3.4', 'e@test.com')
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('anomaly'))
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('1.2.3.4'))
   })
 
   it('warns when distinct email count exceeds the threshold', async () => {
-    redisMock.scard.mockResolvedValue(12)
-    await trackEmailRequestPerIp('1.2.3.4', 'user@test.com')
+    for (let i = 0; i < 12; i++) {
+      await trackEmailRequestPerIp('1.2.3.4', `user${i}@test.com`)
+    }
     expect(console.warn).toHaveBeenCalled()
+  })
+
+  it('duplicate emails do not count toward the threshold (Set deduplication)', async () => {
+    for (let i = 0; i < 10; i++) {
+      await trackEmailRequestPerIp('1.2.3.4', 'same@test.com')
+    }
+    expect(console.warn).not.toHaveBeenCalled()
+  })
+
+  it('different IPs have independent counters', async () => {
+    for (let i = 0; i < 5; i++) {
+      await trackEmailRequestPerIp('1.2.3.4', `user${i}@test.com`)
+    }
+    vi.clearAllMocks()
+
+    await trackEmailRequestPerIp('5.6.7.8', 'user@test.com')
+    expect(console.warn).not.toHaveBeenCalled()
+  })
+
+  it('window resets after expiry', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+
+    for (let i = 0; i < 5; i++) {
+      await trackEmailRequestPerIp('1.2.3.4', `user${i}@test.com`)
+    }
+    expect(console.warn).toHaveBeenCalled()
+    vi.clearAllMocks()
+
+    vi.setSystemTime(10 * 60 * 1000 + 1)
+    await trackEmailRequestPerIp('1.2.3.4', 'fresh@test.com')
+    expect(console.warn).not.toHaveBeenCalled()
   })
 })

@@ -30,15 +30,15 @@ const transporter = nodemailer.createTransport({
 function welcomeTemplate(data: Record<string, string>): MailTemplate {
   const name = data.name ?? ''
   return {
-    subject: 'Добро пожаловать в Птицы Москвы!',
+    subject: 'Добро пожаловать в Birdwatching Moscow!',
     html: `
-      <div style="font-family: sans-serif; line-height: 1.5;">
+      <div>
         <h1>Добро пожаловать, ${name}!</h1>
-        <p>Спасибо, что зарегистрировались на «Птицы Москвы». Теперь вы можете
+        <p>Спасибо, что зарегистрировались на «Birdwatching Moscow». Теперь вы можете
         записываться на орнитологические прогулки и экспедиции.</p>
       </div>
     `,
-    text: `Добро пожаловать, ${name}!\n\nСпасибо, что зарегистрировались на «Птицы Москвы». Теперь вы можете записываться на орнитологические прогулки и экспедиции.`,
+    text: `Добро пожаловать, ${name}!\n\nСпасибо, что зарегистрировались на «Birdwatching Moscow». Теперь вы можете записываться на орнитологические прогулки и экспедиции.`,
   }
 }
 
@@ -47,7 +47,7 @@ function passwordResetTemplate(data: Record<string, string>): MailTemplate {
   return {
     subject: 'Сброс пароля',
     html: `
-      <div style="font-family: sans-serif; line-height: 1.5;">
+      <div>
         <h1>Сброс пароля</h1>
         <p>Вы запросили сброс пароля. Перейдите по ссылке ниже, чтобы задать новый пароль:</p>
         <p><a href="${link}">${link}</a></p>
@@ -63,12 +63,12 @@ function orderPaidTemplate(data: Record<string, string>): MailTemplate {
   return {
     subject: 'Заказ оплачен — ваши билеты готовы',
     html: `
-      <div style="font-family: sans-serif; line-height: 1.5;">
+      <div>
         <h1>Заказ оплачен</h1>
-        <p>Ваш заказ ${orderId} успешно оплачен. Билеты уже доступны в личном кабинете.</p>
+        <p>Ваш заказ ${orderId} успешно оплачен. Билеты уже доступны в личном кабинете и почте.</p>
       </div>
     `,
-    text: `Ваш заказ ${orderId} успешно оплачен. Билеты уже доступны в личном кабинете.`,
+    text: `Ваш заказ ${orderId} успешно оплачен. Билеты уже доступны в личном кабинете и почте.`,
   }
 }
 
@@ -77,10 +77,10 @@ function loginCodeTemplate(data: Record<string, string>): MailTemplate {
   return {
     subject: 'Ваш код входа',
     html: `
-      <div style="font-family: sans-serif; line-height: 1.5;">
+      <div>
         <h1>Код для входа</h1>
         <p>Введите этот код на странице входа:</p>
-        <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">${code}</p>
+        <p>${code}</p>
         <p>Код действует 5 минут.</p>
         <p>Если вы не запрашивали код, просто игнорируйте это письмо.</p>
       </div>

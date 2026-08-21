@@ -16,5 +16,3 @@ export const yookassaNotificationSchema = z.object({
     metadata: z.record(z.string(), z.string()).optional(),
   }),
 })
-
-export type YooKassaNotification = z.infer<typeof yookassaNotificationSchema>
