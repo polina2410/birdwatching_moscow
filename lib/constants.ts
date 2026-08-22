@@ -30,6 +30,7 @@ export const JSON_HEADERS = { 'Content-Type': 'application/json' } as const
 export const LOGIN_CODE_PROVIDER_ID = 'login-code'
 export const ADMIN_2FA_PROVIDER_ID = 'admin-2fa'
 
+export const HTTP_STATUS_CREATED = 201
 export const HTTP_STATUS_BAD_REQUEST = 400
 export const HTTP_STATUS_UNAUTHORIZED = 401
 export const HTTP_STATUS_FORBIDDEN = 403
