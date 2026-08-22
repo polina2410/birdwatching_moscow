@@ -86,6 +86,23 @@ Validate the full email pipeline against the production domain before any users 
 ---
 
 
+## Completed features
+
+| Feature | Branch | Completed |
+|---------|--------|-----------|
+| Database schema | add-database-schema | 2026-05-31 |
+| Authentication (email+password + OTP) | add-authentication | 2026-06-01 |
+| Admin panel CRUD | admin-panel-crud | 2026-06-11 |
+| Walk / Expedition schema split | walk-expedition-split | 2026-06-29 |
+| Next.js admin panel (replaces Django) | nextjs-admin | 2026-08-03 |
+| Passwordless OTP login | passwordless-otp | 2026-08-03 |
+| Admin first-login password setup | verify_login | 2026-08-10 |
+| YooKassa payment integration | yookassa-payment | 2026-07-30 |
+| POST /api/requests | requests-api | 2026-08-22 |
+
+---
+
+
 ## Part II — Public frontend
 
 
