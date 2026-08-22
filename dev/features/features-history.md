@@ -259,3 +259,23 @@ Added forced password setup for ADMIN/SUPERADMIN accounts with no passwordHash. 
 ### Summary
 
 Implemented the full YooKassa Smart Payment flow. Checkout transaction uses authoritative server-side pricing (no client-supplied amounts), holds seats for 20 minutes via `expiresAt`, and clears cart atomically. `applyPaymentResult` is the single reconciliation point for both webhooks and return-page polling — idempotent on duplicate delivery. `YOOKASSA_MODE=stub` (default) requires no API key: a dev confirmation page at `/dev/yookassa/[paymentId]` fires real-shaped webhook notifications to exercise the full state machine locally. Hand-wrote and registered the migration via `prisma migrate resolve --applied` due to pre-existing DB drift.
+
+---
+
+## POST /api/requests
+
+**Branch:** requests-api
+**Completed:** 2026-08-22
+
+### Goals
+
+- Public `POST /api/requests` accepting EXPEDITION and PRIVATE_WALK request types (no auth required)
+- Zod discriminated union validation — 400 on bad input; both branches `.strict()`
+- Expedition existence + ACTIVE status check — 404 on miss or non-ACTIVE
+- 201 `{ id }` on success, row in DB with `status='NEW'`
+- `dev/roadmap.md` updated with completed-features table
+- `HTTP_STATUS_CREATED = 201` added to `lib/constants.ts`
+
+### Summary
+
+Added `POST /api/requests` — a public, unauthenticated endpoint that creates `Request` rows for expedition join requests and private walk enquiries. Uses a Zod discriminated union keyed on `type`: EXPEDITION requires a `expeditionId` UUID and checks the expedition exists with `status='ACTIVE'` before inserting; PRIVATE_WALK requires `message` and uses `.strict()` to reject any stray `expeditionId`. Route delegates JSON parsing and error shaping to the shared `validateRequest` helper, wraps Prisma calls in try/catch with a 500 fallback, and uses `HTTP_STATUS_CREATED` rather than a magic number. 21 tests covering all spec criteria and edge cases.
