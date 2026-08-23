@@ -1,21 +1,16 @@
 # Project Roadmap
 
-
 **Dependency audit & static analysis:**
 - ✅ Run `pnpm audit` before launch; resolve any high/critical findings
 - ✅ Add `pnpm audit --audit-level=high` to CI so new vulnerabilities are caught automatically
 - ✅ Enable automated dependency scanning (Snyk or GitHub Dependabot) to run continuously — catches new CVEs in existing dependencies without manual checks
 - ✅ Add ESLint security rules (`eslint-plugin-security`) to the lint step — runs on every commit and flags common issues (unsafe regex, `eval`, unvalidated redirects, etc.)
 
-
 ---
-
 
 ## Part I — Infrastructure _(start before or alongside Part II)_
 
-
 ### Inf-A: Domain purchase & DNS
-
 
 - Purchase the production domain
 - Point DNS to Selectel VPS IP (A record)
@@ -24,12 +19,9 @@
 - Add CAA record (`0 issue "letsencrypt.org"`) — restricts which CAs may issue certificates for the domain
 - Verify records propagate with `dig` / MXToolbox
 
-
 ### Inf-B: Selectel VPS setup & first deployment
 
-
 Stand up the full production stack on the VPS:
-
 
 - Install Node.js (LTS), pnpm, PostgreSQL, Redis
 - Configure PostgreSQL: create DB user + database, restrict to localhost
@@ -43,7 +35,6 @@ Stand up the full production stack on the VPS:
 - Add `Strict-Transport-Security: max-age=31536000; includeSubDomains` to the Nginx HTTPS server block (HSTS)
 - Confirm the app loads at the production URL
 
-
 **Selectel-specific settings to configure:**
 - Firewall: allow 80, 443, 22 only
 - SSH: disable password auth (`PasswordAuthentication no`) and root login (`PermitRootLogin no`) in `sshd_config` — key-based access only
@@ -52,28 +43,21 @@ Stand up the full production stack on the VPS:
 - Snapshots / backups schedule
 - Monitoring alert on CPU/RAM/disk thresholds
 
-
 ### Inf-C: Image storage setup
-
 
 Decide and configure where user-uploaded images live (walk photos, expedition covers, team member photos, hero background):
 
-
 **Option A — VPS filesystem:** simpler, images served via Nginx at `/uploads`, no extra cost. Risk: images lost if VPS is rebuilt without a backup.
 **Option B — Yandex Object Storage:** S3-compatible, images survive VPS rebuilds, CDN-ready. Requires bucket + access key configuration.
-
 
 Whichever is chosen:
 - Update `next.config.js` with the correct `remotePatterns` entry for `next/image`
 - Update the admin image upload route to write to the chosen destination
 - Document the path/bucket in `.env` so it can be changed per environment
 
-
 ### Inf-D: Email delivery testing
 
-
 Validate the full email pipeline against the production domain before any users sign up:
-
 
 - Trigger a login code email → confirm it arrives, check spam score
 - Trigger a welcome email (register a test account)
@@ -82,54 +66,23 @@ Validate the full email pipeline against the production domain before any users 
 - Check DKIM signature passes (`mail-tester.com` or similar)
 - If any email lands in spam: fix SPF/DKIM record or From address
 
-
 ---
-
-
-## Completed features
-
-| Feature | Branch | Completed |
-|---------|--------|-----------|
-| Database schema | add-database-schema | 2026-05-31 |
-| Authentication (email+password + OTP) | add-authentication | 2026-06-01 |
-| Admin panel CRUD | admin-panel-crud | 2026-06-11 |
-| Walk / Expedition schema split | walk-expedition-split | 2026-06-29 |
-| Next.js admin panel (replaces Django) | nextjs-admin | 2026-08-03 |
-| Passwordless OTP login | passwordless-otp | 2026-08-03 |
-| Admin first-login password setup | verify_login | 2026-08-10 |
-| YooKassa payment integration | yookassa-payment | 2026-07-30 |
-| POST /api/requests | requests-api | 2026-08-22 |
-
----
-
 
 ## Part II — Public frontend
 
-
-Backend is complete (auth, payments, admin panel, DB schema, all API routes). The steps below are the entire public-facing UI.
-
-
----
-
-
-### 0. Provider wiring _(prerequisite — do first)_
-
+### 1. Provider wiring
 
 Wire the missing providers into `app/layout.tsx` so client features work:
-
 
 - `SessionProvider` from `next-auth/react` — required for `useSession()` in any client component
 - `NavigationGuardProvider` from `components/NavigationGuardContext.tsx` — already built, not mounted
 - `<Toaster />` from `sonner` — already in dependencies, not mounted
 
-
 **Files:** `app/layout.tsx`
-
 
 ---
 
-
-### 1. Header
+### 2. Header
 
 
 Site-wide navigation shell. Auth-aware — shows **Login** or **Profile** based on session.
@@ -252,7 +205,7 @@ Multi-item cart backed by the existing `CartItem` DB model. Guests can add items
 - On session start, if localStorage has items, merge is triggered automatically
 
 
-**Ticket blocking:** handled server-side in `/api/checkout` with a Prisma transaction + row-level lock. If a walk sells out between cart-add and checkout, the user receives a clear error ("Мест больше нет"). No client-side reservation is needed.
+✅ **Ticket blocking:** handled server-side in `/api/checkout` with a Prisma transaction + row-level lock. If a walk sells out between cart-add and checkout, the user receives a clear error ("Мест больше нет"). No client-side reservation is needed.
 
 
 **Flow:**
@@ -260,15 +213,20 @@ Multi-item cart backed by the existing `CartItem` DB model. Guests can add items
 2. Cart icon in Header updated (this step) with `CartContext` and item count badge
 3. Cart drawer lists all items: walk title, date, qty, line total, remove button
 4. "Checkout" → `LoginPrompt` if guest → after login, merge → `POST /api/checkout` with all cart items → receive `confirmationUrl` → redirect to YooKassa
-5. Return to `/checkout/return` — add a design pass to match the new design system
+5. ✅ Return to `/checkout/return` — page exists; apply design pass to match the new design system
 
 
-**New API routes:**
+**New API routes (cart — not yet built):**
 - `GET /api/cart` — fetch current DB cart items
 - `POST /api/cart` — add item (walkId + quantity)
 - `PATCH /api/cart/[id]` — update quantity
 - `DELETE /api/cart/[id]` — remove item
 - `POST /api/cart/merge` — merge a localStorage cart payload into DB CartItems (called on login)
+
+**API routes already implemented (payment — from YooKassa feature):**
+- ✅ `POST /api/checkout` — creates `Order` + `OrderItem` rows, calls YooKassa Smart Payment, returns `{ orderId, confirmationUrl }`
+- ✅ `POST /api/payments/yookassa/webhook` — IP-allowlist check, dispatches to `applyPaymentResult`
+- ✅ `GET /api/orders/[id]` — owner-only status polling
 
 
 **New components:**
