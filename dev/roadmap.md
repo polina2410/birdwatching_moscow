@@ -1,21 +1,16 @@
 # Project Roadmap
 
-
 **Dependency audit & static analysis:**
-- Run `pnpm audit` before launch; resolve any high/critical findings
-- Add `pnpm audit --audit-level=high` to CI so new vulnerabilities are caught automatically
-- Enable automated dependency scanning (Snyk or GitHub Dependabot) to run continuously — catches new CVEs in existing dependencies without manual checks
-- Add ESLint security rules (`eslint-plugin-security`) to the lint step — runs on every commit and flags common issues (unsafe regex, `eval`, unvalidated redirects, etc.)
-
+- ✅ Run `pnpm audit` before launch; resolve any high/critical findings
+- ✅ Add `pnpm audit --audit-level=high` to CI so new vulnerabilities are caught automatically
+- ✅ Enable automated dependency scanning (Snyk or GitHub Dependabot) to run continuously — catches new CVEs in existing dependencies without manual checks
+- ✅ Add ESLint security rules (`eslint-plugin-security`) to the lint step — runs on every commit and flags common issues (unsafe regex, `eval`, unvalidated redirects, etc.)
 
 ---
 
-
 ## Part I — Infrastructure _(start before or alongside Part II)_
 
-
 ### Inf-A: Domain purchase & DNS
-
 
 - Purchase the production domain
 - Point DNS to Selectel VPS IP (A record)
@@ -24,12 +19,9 @@
 - Add CAA record (`0 issue "letsencrypt.org"`) — restricts which CAs may issue certificates for the domain
 - Verify records propagate with `dig` / MXToolbox
 
-
 ### Inf-B: Selectel VPS setup & first deployment
 
-
 Stand up the full production stack on the VPS:
-
 
 - Install Node.js (LTS), pnpm, PostgreSQL, Redis
 - Configure PostgreSQL: create DB user + database, restrict to localhost
@@ -43,7 +35,6 @@ Stand up the full production stack on the VPS:
 - Add `Strict-Transport-Security: max-age=31536000; includeSubDomains` to the Nginx HTTPS server block (HSTS)
 - Confirm the app loads at the production URL
 
-
 **Selectel-specific settings to configure:**
 - Firewall: allow 80, 443, 22 only
 - SSH: disable password auth (`PasswordAuthentication no`) and root login (`PermitRootLogin no`) in `sshd_config` — key-based access only
@@ -52,28 +43,17 @@ Stand up the full production stack on the VPS:
 - Snapshots / backups schedule
 - Monitoring alert on CPU/RAM/disk thresholds
 
-
 ### Inf-C: Image storage setup
 
+Yandex Object Storage:** S3-compatible, images survive VPS rebuilds, CDN-ready. Requires bucket + access key configuration.
 
-Decide and configure where user-uploaded images live (walk photos, expedition covers, team member photos, hero background):
-
-
-**Option A — VPS filesystem:** simpler, images served via Nginx at `/uploads`, no extra cost. Risk: images lost if VPS is rebuilt without a backup.
-**Option B — Yandex Object Storage:** S3-compatible, images survive VPS rebuilds, CDN-ready. Requires bucket + access key configuration.
-
-
-Whichever is chosen:
 - Update `next.config.js` with the correct `remotePatterns` entry for `next/image`
 - Update the admin image upload route to write to the chosen destination
 - Document the path/bucket in `.env` so it can be changed per environment
 
-
 ### Inf-D: Email delivery testing
 
-
 Validate the full email pipeline against the production domain before any users sign up:
-
 
 - Trigger a login code email → confirm it arrives, check spam score
 - Trigger a welcome email (register a test account)
@@ -82,79 +62,33 @@ Validate the full email pipeline against the production domain before any users 
 - Check DKIM signature passes (`mail-tester.com` or similar)
 - If any email lands in spam: fix SPF/DKIM record or From address
 
-
 ---
-
-
-## Completed features
-
-| Feature | Branch | Completed |
-|---------|--------|-----------|
-| Database schema | add-database-schema | 2026-05-31 |
-| Authentication (email+password + OTP) | add-authentication | 2026-06-01 |
-| Admin panel CRUD | admin-panel-crud | 2026-06-11 |
-| Walk / Expedition schema split | walk-expedition-split | 2026-06-29 |
-| Next.js admin panel (replaces Django) | nextjs-admin | 2026-08-03 |
-| Passwordless OTP login | passwordless-otp | 2026-08-03 |
-| Admin first-login password setup | verify_login | 2026-08-10 |
-| YooKassa payment integration | yookassa-payment | 2026-07-30 |
-| POST /api/requests | requests-api | 2026-08-22 |
-
----
-
 
 ## Part II — Public frontend
 
-
-Backend is complete (auth, payments, admin panel, DB schema, all API routes). The steps below are the entire public-facing UI.
-
-
----
-
-
-### 0. Provider wiring _(prerequisite — do first)_
-
-
+### 1. Provider wiring
 Wire the missing providers into `app/layout.tsx` so client features work:
-
-
 - `SessionProvider` from `next-auth/react` — required for `useSession()` in any client component
 - `NavigationGuardProvider` from `components/NavigationGuardContext.tsx` — already built, not mounted
-- `<Toaster />` from `sonner` — already in dependencies, not mounted
-
 
 **Files:** `app/layout.tsx`
 
+### 2. Styles
+Set global styles, buttons, fonts and so on.
 
----
-
-
-### 1. Header
-
-
-Site-wide navigation shell. Auth-aware — shows **Login** or **Profile** based on session.
-
+### 2. Header
+Site-wide navigation shell. Auth-aware — shows **Login** or **Profile** based on session. 
 
 **Sections:**
 - Logo (links to `/`)
-- Desktop nav: Walks (`/moscow`), Expeditions (`/expeditions`), Team (`/team`), FAQ (`/faq`), Contact (`/contact`), Private (`/private`)
-- Auth CTA: **Login** button → `/login`, or **Profile** link → `/profile` when logged in
+- Desktop nav: Прогулки (`/moscow`), Экспедиции (`/expeditions`), Частные (`/private`), Книга (`/book`), О проекте (`/about`), Войти (`/login`) (when not authorised) or Профиль (`/profile`) (when not)
 - Mobile: hamburger menu with the same links
-- Cart icon — rendered as a placeholder with no badge in this step; badge and `CartContext` wiring are added in step 5
 
-
-**New components:** `components/Header.module.css`, `components/nav/MobileMenu.tsx`
+**Components**: `components/Header.module.css` and `components/nav/MobileMenu.tsx`
 **Uses:** `Button`, `useSession`
 
-
----
-
-
 ### 2. Footer
-
-
 Static bottom-of-page section.
-
 
 **Sections:**
 - Logo + short tagline
@@ -163,49 +97,28 @@ Static bottom-of-page section.
 - Legal: link to `/oferta`
 - Copyright line
 
-
 **Files:** `components/Footer.tsx`, `components/Footer.module.css`
 
-
----
-
-
-### 3. Home page
-
-
-First page a visitor sees. Server component — fetches 3 nearest upcoming walks from DB.
-
-
+### 3. Home page: 
 **Sections:**
 - Hero: photo background, headline, subtitle, CTA button → `/moscow`
 - "What we do" intro: 2–3 short blocks (walks / expeditions / team)
 - Upcoming walks teaser: 3 nearest published walks as cards, "View all" → `/moscow`; if none, show "Прогулок пока нет — следите за обновлениями"
 - CTA strip: "Join an expedition" → `/expeditions`
 
-
 **Files:** `app/page.tsx`, `components/home/Hero.tsx`, `components/home/WalkTeaser.tsx`
-
 
 **Prerequisite:** Inf-C must be done — hero image source and `next/image` config must be resolved before this step.
 
-
----
-
-
 ### 4. City Walks listing (`/moscow`)
-
-
 Fetch and display all published walks. Server component.
 
-
 **Walk card shows:** title, date + time, location, guide name + photo thumbnail, price (per person), spots left (capacity − sold), action button.
-
 
 **Capacity states on WalkCard:**
 - Available: "Add to cart" button + spots remaining count
 - Low availability (≤ 5 spots): spots count shown in warning colour
 - Sold out: button replaced with "Sold out" badge (disabled), no spots count
-
 
 **Filtering:** URL search params — `?past=1` toggles past walks (server-rendered, shareable, works without JS). Default shows upcoming only.
 
@@ -215,31 +128,15 @@ Fetch and display all published walks. Server component.
 - DB error: generic "Что-то пошло не так" with a reload prompt
 
 
-**Pagination:** fetch up to 20 walks per page; `?page=N` URL param. If total ≤ 20, no pagination UI needed.
-
-
 **Queries:** use Prisma `include` + `_count` to fetch guide and ticket count in a single query — avoid N+1 on the guide join.
-
-
-**Step 4+5 coupling:** `WalkCard` accepts an `onAddToCart` prop (no-op stub in this step). Step 5 wires the real handler. This avoids rebuilding the card component later.
-
 
 **New components:**
 - `components/cityWalks/WalkCard.tsx` + `.module.css`
 - `components/cityWalks/CityWalks.tsx` (replaces stub)
 
-
 **Files:** `app/moscow/page.tsx`, component files above
 
-
----
-
-
-### 5. Cart & ticket purchase
-
-
-Multi-item cart backed by the existing `CartItem` DB model. Guests can add items; login is required only at checkout.
-
+### 5. Ticket purchase
 
 **Guest cart (localStorage):**
 - Unauthenticated users can add walks to cart — stored as `[{ walkId, quantity }]` in `localStorage`
@@ -252,7 +149,7 @@ Multi-item cart backed by the existing `CartItem` DB model. Guests can add items
 - On session start, if localStorage has items, merge is triggered automatically
 
 
-**Ticket blocking:** handled server-side in `/api/checkout` with a Prisma transaction + row-level lock. If a walk sells out between cart-add and checkout, the user receives a clear error ("Мест больше нет"). No client-side reservation is needed.
+✅ **Ticket blocking:** handled server-side in `/api/checkout` with a Prisma transaction + row-level lock. If a walk sells out between cart-add and checkout, the user receives a clear error ("Мест больше нет"). No client-side reservation is needed.
 
 
 **Flow:**
@@ -260,15 +157,20 @@ Multi-item cart backed by the existing `CartItem` DB model. Guests can add items
 2. Cart icon in Header updated (this step) with `CartContext` and item count badge
 3. Cart drawer lists all items: walk title, date, qty, line total, remove button
 4. "Checkout" → `LoginPrompt` if guest → after login, merge → `POST /api/checkout` with all cart items → receive `confirmationUrl` → redirect to YooKassa
-5. Return to `/checkout/return` — add a design pass to match the new design system
+5. ✅ Return to `/checkout/return` — page exists; apply design pass to match the new design system
 
 
-**New API routes:**
+**New API routes (cart — not yet built):**
 - `GET /api/cart` — fetch current DB cart items
 - `POST /api/cart` — add item (walkId + quantity)
 - `PATCH /api/cart/[id]` — update quantity
 - `DELETE /api/cart/[id]` — remove item
 - `POST /api/cart/merge` — merge a localStorage cart payload into DB CartItems (called on login)
+
+**API routes already implemented (payment — from YooKassa feature):**
+- ✅ `POST /api/checkout` — creates `Order` + `OrderItem` rows, calls YooKassa Smart Payment, returns `{ orderId, confirmationUrl }`
+- ✅ `POST /api/payments/yookassa/webhook` — IP-allowlist check, dispatches to `applyPaymentResult`
+- ✅ `GET /api/orders/[id]` — owner-only status polling
 
 
 **New components:**
@@ -328,11 +230,11 @@ A detail page per expedition plus a "Request a spot" form. The form is open to a
 **Request form:**
 - Fields: name, email, phone, message (optional); pre-filled from session if logged in
 - Open to guests — no auth gate on this form
-- Submits to `/api/requests` → creates `Request` record; **this route does not yet exist and must be built in this step**
+- Submits to `/api/requests` → creates `Request` record; ✅ route already implemented (see POST /api/requests feature)
 - Success: inline confirmation message; no payment at this stage
 
 
-**New backend:** `app/api/requests/route.ts` — validate body (Zod), create `Request` row, return 201. Add Zod schema to `lib/validation/`.
+✅ **New backend:** `app/api/requests/route.ts` — validate body (Zod), create `Request` row, return 201. Add Zod schema to `lib/validation/`.
 
 
 **New components:** `components/expeditions/ExpeditionDetail.tsx`, `components/expeditions/RequestForm.tsx`
