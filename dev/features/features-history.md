@@ -262,6 +262,23 @@ Implemented the full YooKassa Smart Payment flow. Checkout transaction uses auth
 
 ---
 
+## HTTP Security Headers
+
+**Branch:** security-headers
+**Completed:** 2026-08-23
+
+### Goals
+
+- Export `SECURITY_HEADERS` from `next.config.ts` with four static headers: `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`
+- `headers()` function returns one source entry matching `'/:path*'`
+- `reactCompiler: true` retained; `pnpm test:run` and `pnpm build` pass
+
+### Summary
+
+Added four HTTP security headers to every route via a `headers()` export in `next.config.ts`. `SECURITY_HEADERS` is a named export so tests can import it directly without running Next.js. CSP explicitly excluded — tracked separately in roadmap Step 17. HSTS remains at the Nginx level per infrastructure conventions.
+
+---
+
 ## POST /api/requests
 
 **Branch:** requests-api
