@@ -45,12 +45,8 @@ Stand up the full production stack on the VPS:
 
 ### Inf-C: Image storage setup
 
-Decide and configure where user-uploaded images live (walk photos, expedition covers, team member photos, hero background):
+Yandex Object Storage:** S3-compatible, images survive VPS rebuilds, CDN-ready. Requires bucket + access key configuration.
 
-**Option A — VPS filesystem:** simpler, images served via Nginx at `/uploads`, no extra cost. Risk: images lost if VPS is rebuilt without a backup.
-**Option B — Yandex Object Storage:** S3-compatible, images survive VPS rebuilds, CDN-ready. Requires bucket + access key configuration.
-
-Whichever is chosen:
 - Update `next.config.js` with the correct `remotePatterns` entry for `next/image`
 - Update the admin image upload route to write to the chosen destination
 - Document the path/bucket in `.env` so it can be changed per environment
@@ -71,43 +67,28 @@ Validate the full email pipeline against the production domain before any users 
 ## Part II — Public frontend
 
 ### 1. Provider wiring
-
 Wire the missing providers into `app/layout.tsx` so client features work:
-
 - `SessionProvider` from `next-auth/react` — required for `useSession()` in any client component
 - `NavigationGuardProvider` from `components/NavigationGuardContext.tsx` — already built, not mounted
-- `<Toaster />` from `sonner` — already in dependencies, not mounted
 
 **Files:** `app/layout.tsx`
 
----
+### 2. Styles
+Set global styles, buttons, fonts and so on.
 
 ### 2. Header
-
-
-Site-wide navigation shell. Auth-aware — shows **Login** or **Profile** based on session.
-
+Site-wide navigation shell. Auth-aware — shows **Login** or **Profile** based on session. 
 
 **Sections:**
 - Logo (links to `/`)
-- Desktop nav: Walks (`/moscow`), Expeditions (`/expeditions`), Team (`/team`), FAQ (`/faq`), Contact (`/contact`), Private (`/private`)
-- Auth CTA: **Login** button → `/login`, or **Profile** link → `/profile` when logged in
+- Desktop nav: Прогулки (`/moscow`), Экспедиции (`/expeditions`), Частные (`/private`), Книга (`/book`), О проекте (`/about`), Войти (`/login`) (when not authorised) or Профиль (`/profile`) (when not)
 - Mobile: hamburger menu with the same links
-- Cart icon — rendered as a placeholder with no badge in this step; badge and `CartContext` wiring are added in step 5
 
-
-**New components:** `components/Header.module.css`, `components/nav/MobileMenu.tsx`
+**Components**: `components/Header.module.css` and `components/nav/MobileMenu.tsx`
 **Uses:** `Button`, `useSession`
 
-
----
-
-
 ### 2. Footer
-
-
 Static bottom-of-page section.
-
 
 **Sections:**
 - Logo + short tagline
@@ -116,49 +97,28 @@ Static bottom-of-page section.
 - Legal: link to `/oferta`
 - Copyright line
 
-
 **Files:** `components/Footer.tsx`, `components/Footer.module.css`
 
-
----
-
-
-### 3. Home page
-
-
-First page a visitor sees. Server component — fetches 3 nearest upcoming walks from DB.
-
-
+### 3. Home page: 
 **Sections:**
 - Hero: photo background, headline, subtitle, CTA button → `/moscow`
 - "What we do" intro: 2–3 short blocks (walks / expeditions / team)
 - Upcoming walks teaser: 3 nearest published walks as cards, "View all" → `/moscow`; if none, show "Прогулок пока нет — следите за обновлениями"
 - CTA strip: "Join an expedition" → `/expeditions`
 
-
 **Files:** `app/page.tsx`, `components/home/Hero.tsx`, `components/home/WalkTeaser.tsx`
-
 
 **Prerequisite:** Inf-C must be done — hero image source and `next/image` config must be resolved before this step.
 
-
----
-
-
 ### 4. City Walks listing (`/moscow`)
-
-
 Fetch and display all published walks. Server component.
 
-
 **Walk card shows:** title, date + time, location, guide name + photo thumbnail, price (per person), spots left (capacity − sold), action button.
-
 
 **Capacity states on WalkCard:**
 - Available: "Add to cart" button + spots remaining count
 - Low availability (≤ 5 spots): spots count shown in warning colour
 - Sold out: button replaced with "Sold out" badge (disabled), no spots count
-
 
 **Filtering:** URL search params — `?past=1` toggles past walks (server-rendered, shareable, works without JS). Default shows upcoming only.
 
@@ -168,31 +128,15 @@ Fetch and display all published walks. Server component.
 - DB error: generic "Что-то пошло не так" with a reload prompt
 
 
-**Pagination:** fetch up to 20 walks per page; `?page=N` URL param. If total ≤ 20, no pagination UI needed.
-
-
 **Queries:** use Prisma `include` + `_count` to fetch guide and ticket count in a single query — avoid N+1 on the guide join.
-
-
-**Step 4+5 coupling:** `WalkCard` accepts an `onAddToCart` prop (no-op stub in this step). Step 5 wires the real handler. This avoids rebuilding the card component later.
-
 
 **New components:**
 - `components/cityWalks/WalkCard.tsx` + `.module.css`
 - `components/cityWalks/CityWalks.tsx` (replaces stub)
 
-
 **Files:** `app/moscow/page.tsx`, component files above
 
-
----
-
-
-### 5. Cart & ticket purchase
-
-
-Multi-item cart backed by the existing `CartItem` DB model. Guests can add items; login is required only at checkout.
-
+### 5. Ticket purchase
 
 **Guest cart (localStorage):**
 - Unauthenticated users can add walks to cart — stored as `[{ walkId, quantity }]` in `localStorage`
