@@ -521,7 +521,7 @@ Validate the app performs acceptably under realistic load before opening to the 
 ### 17. Security headers & CSP
 
 
-**HTTP security headers** — add to the `headers()` export in `next.config.ts`, applied to all routes:
+**HTTP security headers** ✅ — shipped in PR #32
 - `X-Frame-Options: SAMEORIGIN` — clickjacking protection
 - `X-Content-Type-Options: nosniff` — MIME-sniffing protection
 - `Referrer-Policy: strict-origin-when-cross-origin`
