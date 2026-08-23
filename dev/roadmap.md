@@ -2,10 +2,10 @@
 
 
 **Dependency audit & static analysis:**
-- Run `pnpm audit` before launch; resolve any high/critical findings
-- Add `pnpm audit --audit-level=high` to CI so new vulnerabilities are caught automatically
-- Enable automated dependency scanning (Snyk or GitHub Dependabot) to run continuously — catches new CVEs in existing dependencies without manual checks
-- Add ESLint security rules (`eslint-plugin-security`) to the lint step — runs on every commit and flags common issues (unsafe regex, `eval`, unvalidated redirects, etc.)
+- ✅ Run `pnpm audit` before launch; resolve any high/critical findings
+- ✅ Add `pnpm audit --audit-level=high` to CI so new vulnerabilities are caught automatically
+- ✅ Enable automated dependency scanning (Snyk or GitHub Dependabot) to run continuously — catches new CVEs in existing dependencies without manual checks
+- ✅ Add ESLint security rules (`eslint-plugin-security`) to the lint step — runs on every commit and flags common issues (unsafe regex, `eval`, unvalidated redirects, etc.)
 
 
 ---
@@ -328,11 +328,11 @@ A detail page per expedition plus a "Request a spot" form. The form is open to a
 **Request form:**
 - Fields: name, email, phone, message (optional); pre-filled from session if logged in
 - Open to guests — no auth gate on this form
-- Submits to `/api/requests` → creates `Request` record; **this route does not yet exist and must be built in this step**
+- Submits to `/api/requests` → creates `Request` record; ✅ route already implemented (see POST /api/requests feature)
 - Success: inline confirmation message; no payment at this stage
 
 
-**New backend:** `app/api/requests/route.ts` — validate body (Zod), create `Request` row, return 201. Add Zod schema to `lib/validation/`.
+✅ **New backend:** `app/api/requests/route.ts` — validate body (Zod), create `Request` row, return 201. Add Zod schema to `lib/validation/`.
 
 
 **New components:** `components/expeditions/ExpeditionDetail.tsx`, `components/expeditions/RequestForm.tsx`
