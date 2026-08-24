@@ -1,10 +1,11 @@
 import styles from './Spinner.module.css';
 
-type SpinnerProps = {
-  size?: 'sm' | 'md';
+interface SpinnerProps {
   label?: string;
-};
+}
 
-export const Spinner = ({ size = 'md', label = 'Загрузка…' }: SpinnerProps) => (
-  <span role="status" aria-label={label} className={[styles.spinner, styles[size]].join(' ')} />
+export const Spinner = ({ label }: SpinnerProps) => (
+  <div className={styles.wrapper} role="status" aria-label={label}>
+    <div className={styles.ring} />
+  </div>
 );

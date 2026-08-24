@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import styles from './Button.module.css';
-import { Spinner } from '@/components/ui/spinner/Spinner';
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -29,7 +28,6 @@ export const Button = ({ variant = 'primary', size = 'md', loading = false, disa
     const { as: _as, href, ...linkRest } = rest as AsLink;
     return (
       <Link href={href} className={cls} aria-disabled={isDisabled} {...linkRest}>
-        {loading && <Spinner size="sm" />}
         {children}
       </Link>
     );
@@ -38,7 +36,6 @@ export const Button = ({ variant = 'primary', size = 'md', loading = false, disa
   const { as: _as, ...btnRest } = rest as AsButton;
   return (
     <button className={cls} disabled={isDisabled} {...btnRest}>
-      {loading && <Spinner size="sm" />}
       {children}
     </button>
   );
