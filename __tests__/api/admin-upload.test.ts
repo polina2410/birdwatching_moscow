@@ -151,3 +151,17 @@ describe('POST /api/admin/upload — S3 error handling', () => {
     expect(JSON.stringify(body)).not.toContain('AccessDenied')
   })
 })
+
+describe('POST /api/admin/upload — formData parse failure', () => {
+  beforeEach(() => { authMock.mockResolvedValue(ADMIN_SESSION) })
+
+  it('returns 400 when request.formData() throws', async () => {
+    const req = {
+      formData: () => Promise.reject(new Error('multipart parse error')),
+    } as unknown as Request
+    const res = await POST(req)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body).toEqual({ error: 'file required' })
+  })
+})

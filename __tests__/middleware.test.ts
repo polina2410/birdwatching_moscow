@@ -97,3 +97,13 @@ describe('middleware admin route protection', () => {
     expect(res.status).toBeLessThan(300)
   })
 })
+
+describe('middleware CSP headers', () => {
+  it('sets img-src to include storage.yandexcloud.net', async () => {
+    const req = makeReq('/')
+    const res = await (middleware as unknown as (r: FakeReq) => Promise<Response>)(req)
+    const csp = res.headers.get('content-security-policy') ?? ''
+    expect(csp).toContain('img-src')
+    expect(csp).toContain('https://storage.yandexcloud.net')
+  })
+})
