@@ -11,7 +11,10 @@ vi.mock('@/lib/s3', () => ({
   S3_BUCKET: 'test-bucket',
 }))
 vi.mock('@aws-sdk/client-s3', () => ({
-  PutObjectCommand: vi.fn().mockImplementation((input) => ({ input })),
+  // arrow function mocks cannot be used as constructors in vitest 4 — must use function/class
+  PutObjectCommand: vi.fn().mockImplementation(function (this: { input: unknown }, input: unknown) {
+    this.input = input
+  }),
 }))
 
 import { POST } from '@/app/api/admin/upload/route'

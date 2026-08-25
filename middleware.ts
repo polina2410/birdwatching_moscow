@@ -13,7 +13,7 @@ export default auth((req) => {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
     "style-src 'self' 'unsafe-inline' https://api.fontshare.com",
     "font-src 'self' https://api.fontshare.com https://cdn.fontshare.com",
-    "img-src 'self' data: blob: https://flagcdn.com https://upload.wikimedia.org https://unpkg.com",
+    "img-src 'self' data: blob: https://flagcdn.com https://upload.wikimedia.org https://unpkg.com https://storage.yandexcloud.net",
     "connect-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",

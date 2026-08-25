@@ -371,12 +371,6 @@ Server component — fetches FAQ items from DB (see Admin: FAQ management in Ite
 - `components/ui/accordion/Accordion.tsx` — reusable expand/collapse list
 - `components/faq/FAQ.tsx` (replaces stub) — renders items fetched from DB
 
-### 36. Contact page (`/contact`)
-Static contact info. No database.
-
-**Sections:** email, phone, Telegram, VK links.
-**Files:** `components/contact/Contact.tsx` (replaces stub), `components/contact/Contact.module.css`
-
 ### 37. Private events page (`/private`)
 Static description of the private events offering + request form (`RequestForm` from section 28 with `type="private"`).
 
