@@ -40,9 +40,10 @@ Stand up the full production stack on the VPS:
 ### 3. Infrastructure: Image storage setup
 Yandex Object Storage: S3-compatible, images survive VPS rebuilds, CDN-ready. Requires bucket + access key configuration.
 
+- ✅ Create S3 client in `lib/s3.ts` (bucket + credentials wired via env)
+- ✅ Document the path/bucket in `.env.example` so it can be changed per environment
 - Update `next.config.js` with the correct `remotePatterns` entry for `next/image`
 - Update the admin image upload route to write to the chosen destination
-- Document the path/bucket in `.env` so it can be changed per environment
 
 ### 4. Infrastructure: Email delivery testing
 Validate the full email pipeline against the production domain before any users sign up:
