@@ -296,3 +296,20 @@ Added four HTTP security headers to every route via a `headers()` export in `nex
 ### Summary
 
 Added `POST /api/requests` — a public, unauthenticated endpoint that creates `Request` rows for expedition join requests and private walk enquiries. Uses a Zod discriminated union keyed on `type`: EXPEDITION requires a `expeditionId` UUID and checks the expedition exists with `status='ACTIVE'` before inserting; PRIVATE_WALK requires `message` and uses `.strict()` to reject any stray `expeditionId`. Route delegates JSON parsing and error shaping to the shared `validateRequest` helper, wraps Prisma calls in try/catch with a 500 fallback, and uses `HTTP_STATUS_CREATED` rather than a magic number. 21 tests covering all spec criteria and edge cases.
+
+---
+
+## App Wiring
+
+**Branch:** app-wiring
+**Completed:** 2026-08-25
+
+### Goals
+
+- `next.config.ts` `remotePatterns` for `storage.yandexcloud.net` so `next/image` can serve Yandex Object Storage images
+- `POST /api/admin/upload` — admin-only route uploading images to S3 and returning the public URL
+- `components/Providers.tsx` + `app/layout.tsx` wiring: `SessionProvider` and `NavigationGuardProvider` mounted without making the root layout a Client Component
+
+### Summary
+
+Wired the three missing infrastructure pieces needed before admin image management works end-to-end. Added `remotePatterns` for `storage.yandexcloud.net` to `next.config.ts`. Created `POST /api/admin/upload` — validates session role (ADMIN/SUPERADMIN), enforces image MIME allow-list and 5 MB cap, uploads via the existing `s3` client with `public-read` ACL and a `uploads/<uuid>.<ext>` key, and returns the public URL. Created `components/Providers.tsx` as the sole new `'use client'` boundary wrapping `SessionProvider` and `NavigationGuardProvider`; root layout stays a Server Component. CSP `img-src` updated in `middleware.ts` to allow `storage.yandexcloud.net`. Contact page removed. jsdom `Request.formData()` patched in test setup to handle `File` objects correctly with Vitest 4.
