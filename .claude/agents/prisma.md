@@ -130,6 +130,6 @@ type CreateInput = Prisma.ExampleCreateInput;
 |---|---|
 | Schema design and migrations | Application logic |
 | Query patterns and optimization | Rate limiting (`lib/rateLimit.ts`) |
-| Relation design | Redis (`lib/redis.ts`) |
+| Relation design | UI components |
 | Type usage | UI components |
 | Prisma error debugging | Auth provider setup |

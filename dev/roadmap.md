@@ -8,18 +8,17 @@
 - ✅ Add ESLint security rules (`eslint-plugin-security`) to the lint step — runs on every commit and flags common issues (unsafe regex, `eval`, unvalidated redirects, etc.)
 
 ### 1. Infrastructure: Domain purchase & DNS
-- Purchase the production domain
-- Point DNS to Selectel VPS IP (A record)
-- Add MX record for the sending domain (Yandex Cloud Postbox)
-- Add SPF, DKIM, DMARC records for outbound email deliverability
-- Add CAA record (`0 issue "letsencrypt.org"`) — restricts which CAs may issue certificates for the domain
-- Verify records propagate with `dig` / MXToolbox
+- ✅ Purchase the production domain
+- ✅ Point DNS to Selectel VPS IP (A record)
+- ✅ Add MX record for the sending domain (Yandex Cloud Postbox)
+- ✅ Add SPF, DKIM, DMARC records for outbound email deliverability
+- ✅ Add CAA record (`0 issue "letsencrypt.org"`) — restricts which CAs may issue certificates for the domain
+- ✅ Verify records propagate with `dig` / MXToolbox
 
 ### 2. Infrastructure: Selectel VPS setup & first deployment
 Stand up the full production stack on the VPS:
-- Install Node.js (LTS), pnpm, PostgreSQL, Redis
+- Install Node.js (LTS), pnpm, PostgreSQL
 - Configure PostgreSQL: create DB user + database, restrict to localhost
-- Configure Redis: bind to localhost, set `requirepass`
 - Run Prisma migrations: `pnpm exec prisma migrate deploy`
 - Configure environment variables in `.env.production` (never committed)
 - Build the app: `pnpm build`
@@ -36,16 +35,17 @@ Stand up the full production stack on the VPS:
 - Enable unattended security upgrades for OS packages (`unattended-upgrades`)
 - Snapshots / backups schedule
 - Monitoring alert on CPU/RAM/disk thresholds
+- Create staging
 
 ### 3. Infrastructure: Image storage setup
 Yandex Object Storage: S3-compatible, images survive VPS rebuilds, CDN-ready. Requires bucket + access key configuration.
 
 - ✅ Create S3 client in `lib/s3.ts` (bucket + credentials wired via env)
 - ✅ Document the path/bucket in `.env.example` so it can be changed per environment
-- Update `next.config.js` with the correct `remotePatterns` entry for `next/image`
+- ✅ Update `next.config.js` with the correct `remotePatterns` entry for `next/image`
 - Update the admin image upload route to write to the chosen destination
 
-### 4. Infrastructure: Email delivery testing
+### ✅ 4. Infrastructure: Email delivery testing
 Validate the full email pipeline against the production domain before any users sign up:
 
 - Trigger a login code email → confirm it arrives, check spam score
@@ -55,7 +55,7 @@ Validate the full email pipeline against the production domain before any users 
 - Check DKIM signature passes (`mail-tester.com` or similar)
 - If any email lands in spam: fix SPF/DKIM record or From address
 
-### 5. Provider wiring
+### ✅ 5. Provider wiring
 Wire the missing providers into `app/layout.tsx` so client features work:
 - `SessionProvider` from `next-auth/react` — required for `useSession()` in any client component
 - `NavigationGuardProvider` from `components/NavigationGuardContext.tsx` — already built, not mounted
@@ -71,7 +71,7 @@ Site-wide navigation shell. Auth-aware — shows **Войти** or **Профи�
 
 **Sections:**
 - Logo (links to `/`)
-- Desktop nav: Прогулки (`/moscow`), Экспедиции (`/expeditions`), Частные (`/private`), Книга (`/book`), О проекте (`/about`), Войти (`/login`) (when not authorised) or Профиль (`/profile`) (when authorised)
+- Desktop nav: Прогулки (`/walks`), Экспедиции (`/expeditions`), Частные (`/private-events`), Книга (`/book`), О проекте (`/about`), Войти (`/login`) (when not authorised) or Профиль (`/profile`) (when authorised)
 - Mobile: hamburger menu with the same links
 
 **Components:** `components/header/Header.tsx`, `components/header/Header.module.css`, `components/header/MobileMenu.tsx`
@@ -106,7 +106,7 @@ Static bottom-of-page section.
 
 **Sections:**
 - Title + short tagline on the left
-- Разделы (Прогулки (`/moscow`), Экспедиции (`/expeditions`), Частные события (`/private`), О проекте (`/about`), FAQ (`/faq`), Сертификаты (`/certificates`)) and Контакты (birdwatching@mail.ru link, Оферта (`/oferta`)) columns on the right
+- Разделы (Прогулки (`/walks`), Экспедиции (`/expeditions`), Частные события (`/private-events`), О проекте (`/about`), FAQ (`/faq`), Сертификаты (`/certificates`)) and Контакты (birdwatching@mail.ru link, Оферта (`/oferta`)) columns on the right
 - Contact block: email, phone, social links (VK, Telegram)
 - Legal: link to `/oferta`
 - Copyright line
@@ -150,7 +150,7 @@ Two small feature blocks using the same component with different props.
 ### 16. Home page: Partners
 **Files:** `components/home/partners/Partners.tsx`, `components/home/partners/Partner.tsx`
 
-### 17. City Walks page (`/moscow`)
+### 17. City Walks page (`/walks`)
 Fetch and display all published walks. Server component.
 
 - Full-width photo
@@ -165,7 +165,7 @@ Fetch and display all published walks. Server component.
 **Queries:** use Prisma `include` + `_count` to fetch guide and ticket count in a single query — avoid N+1 on the guide join.
 
 **Components:** `components/walks/CityWalksPage.tsx`, `components/walks/WalksTable.tsx`, `components/walks/WalkRow.tsx`
-**Files:** `app/moscow/page.tsx`
+**Files:** `app/walks/page.tsx`
 
 ### 18. Walk detail page
 - Path: `/walk-name` — the walk's name latinised with spaces replaced by `-`
@@ -371,10 +371,10 @@ Server component — fetches FAQ items from DB (see Admin: FAQ management in Ite
 - `components/ui/accordion/Accordion.tsx` — reusable expand/collapse list
 - `components/faq/FAQ.tsx` (replaces stub) — renders items fetched from DB
 
-### 37. Private events page (`/private`)
+### 37. Private events page (`/private-events`)
 Static description of the private events offering + request form (`RequestForm` from section 28 with `type="private"`).
 
-**Files:** `components/private/Private.tsx` (replaces stub), `components/private/Private.module.css`
+**Files:** `components/private-events/PrivateEvents.tsx` (replaces stub), `components/private-events/PrivateEvents.module.css`
 
 ### 38. Oferta page (`/oferta`)
 Legal public offer text. Fully static.
@@ -412,7 +412,7 @@ Add metadata to every public page so the site is indexed correctly by Yandex and
 Two layers of loading UI are needed: a route-level `loading.tsx` for instant feedback on navigation, and component-level skeletons inside `<Suspense>` for streaming data.
 
 **Route-level `loading.tsx`** — Next.js shows this file instantly on navigation while the page's async server component resolves. Add one for every non-static route:
-- `app/moscow/loading.tsx`
+- `app/walks/loading.tsx`
 - `app/[walkSlug]/loading.tsx`
 - `app/expeditions/loading.tsx`
 - `app/expeditions/[slug]/loading.tsx`
@@ -478,7 +478,7 @@ IP allowlisting alone is not sufficient — YooKassa signs every webhook with an
 - Add a unit test: valid signature passes, tampered body returns 401
 
 ### 46. Rate limiting on sensitive endpoints
-Protect the auth flow and checkout from abuse. Use an in-memory store (e.g. `lru-cache` + sliding window) or Redis if already configured.
+Protect the auth flow and checkout from abuse. Uses an in-memory store (sliding window) — see `lib/rateLimit.ts`.
 
 **Endpoints to rate-limit:**
 - `POST /api/auth/*` (OTP send + verify) — e.g. 5 requests per 15 min per IP
@@ -510,6 +510,32 @@ The site collects personal data (names, emails) and takes payments — a privacy
 ### 1. Private: add all locations to the Частные page
 **Files:** `components/ui/BirdwatchingLocations.tsx`, `components/ui/BirdwatchingLocation.tsx`
 
+### 7. Superadmin functionality in /admin
+Full user management for superadmins. Builds on the read-only users list from section 33.
+
+**Admin UI** (`app/admin/users/`):
+- Change a user's role (USER → ADMIN → SUPERADMIN and back)
+- Block / unblock an account
+- Soft-delete a user
+
+**Guards:**
+- At least one non-blocked SUPERADMIN must remain at all times — enforce server-side (already guarded in `_actions.ts`)
+- All actions restricted to SUPERADMIN role; ADMIN hitting these routes gets 403
+
+**API routes:**
+- `PATCH /api/admin/users/[id]` — update role or blockedAt
+- `DELETE /api/admin/users/[id]` — soft-delete
+
+### 8. Cron job: expired token cleanup
+Periodic cleanup of stale rows that accumulate over time but are never automatically removed.
+
+**Tables to clean:**
+- `LoginCode` — delete rows where `expiresAt < NOW()` or `usedAt IS NOT NULL`
+- `PasswordResetToken` — delete rows where `expiresAt < NOW()` or `usedAt IS NOT NULL`
+- `AdminLoginChallenge` — delete rows where `expiresAt < NOW()` or `usedAt IS NOT NULL`
+
+**Implementation:** a script in `scripts/cleanup-expired-tokens.ts` running via `pnpm exec ts-node` scheduled as a daily cron job on the Selectel VPS (system crontab or PM2 cron mode).
+
 ### 2. Admin: FAQ management
 Lets the admin create, edit, delete, and reorder FAQ items without a code deploy.
 
@@ -536,3 +562,4 @@ Lets the admin create, edit, delete, and reorder FAQ items without a code deploy
 ### 4. Login/Registration in purchase page
 ### 5. PDF book on `book` page
 ### 6. Certificates Generation
+

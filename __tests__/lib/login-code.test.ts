@@ -16,16 +16,15 @@ describe('generateLoginCode', () => {
     }
   })
 
-  it('over 1000 calls: never produces 0, O, 1, I or L, and uses ≥25 distinct chars', () => {
-    const forbidden = new Set(['0', 'O', '1', 'I', 'L'])
+  it('over 1000 calls: uses all 10 digits and no non-digit chars', () => {
     const seen = new Set<string>()
     for (let i = 0; i < 1000; i++) {
       for (const ch of generateLoginCode()) {
-        expect(forbidden.has(ch), `forbidden char "${ch}"`).toBe(false)
+        expect(/\d/.test(ch), `non-digit char "${ch}"`).toBe(true)
         seen.add(ch)
       }
     }
-    expect(seen.size).toBeGreaterThanOrEqual(25)
+    expect(seen.size).toBe(10)
   })
 })
 

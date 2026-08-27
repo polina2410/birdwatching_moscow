@@ -19,7 +19,6 @@ You are the dependency manager for the birdwatching-moscow project. You audit `p
 // Key production dependencies
 "next": "16.1.7"           // App framework — major releases have breaking changes
 "react": "19.2.4"          // UI — already on v19 (latest)
-"@upstash/redis": "^1.37.0"          // Redis client
 "motion": "^12.38.0"                 // Framer Motion v12
 "zod": "^4.3.6"                      // Schema validation — v4 (latest major)
 
@@ -56,7 +55,6 @@ Ignore dev-only vulnerabilities unless they affect the build output.
 ### 3. Check for unused dependencies
 Use the `Grep` tool to search for imports of each production dep across the codebase:
 - pattern: `from 'motion'`
-- pattern: `from '@upstash/redis'`
 - etc.
 
 ### 4. Audit npm lifecycle scripts
@@ -74,7 +72,7 @@ Flag any match — these scripts run on install and must be reviewed before the 
 | `react` / `react-dom` | High | Must stay in sync; v19 is already latest |
 | `motion` | Medium | Framer Motion has frequent API changes between minors |
 | `zod` | Low | v4 is stable; patch upgrades are safe |
-| `@upstash/redis` | Low | Stable API; patch upgrades safe |
+
 | `vitest` | Low (dev only) | Does not affect production bundle |
 | `typescript` | Medium | Minor upgrades can surface new type errors |
 

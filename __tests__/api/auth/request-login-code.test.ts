@@ -14,7 +14,7 @@ const {
     loginCode: { deleteMany: vi.fn(), create: vi.fn() },
   },
   sendMailMock: vi.fn(),
-  generateLoginCodeMock: vi.fn().mockReturnValue('ABCD2F'),
+  generateLoginCodeMock: vi.fn().mockReturnValue('123456'),
   hashLoginCodeMock: vi.fn().mockReturnValue('a'.repeat(64)),
   checkRateLimitMock: vi.fn().mockResolvedValue({ allowed: true, retryAfterSeconds: 0 }),
   generateLoginCsrfTokenMock: vi.fn().mockReturnValue('mock-csrf-token'),

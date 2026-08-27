@@ -32,6 +32,7 @@ function LoginCodeForm() {
   const [emailInput, setEmailInput] = useState('')
   const showEmailSubmit = useLooksLikeEmail(emailInput)
   const [challengeToken, setChallengeToken] = useState('')
+  const [csrfToken, setCsrfToken] = useState('')
   const codeInputRef = useRef<HTMLInputElement>(null)
   const passwordInputRef = useRef<HTMLInputElement>(null)
   const newPasswordInputRef = useRef<HTMLInputElement>(null)
@@ -52,11 +53,13 @@ function LoginCodeForm() {
 
   async function requestCode(address: string) {
     await run(async () => {
-      await fetch('/api/auth/request-login-code', {
+      const res = await fetch('/api/auth/request-login-code', {
         method: HTTP_METHOD.POST,
         headers: JSON_HEADERS,
         body: JSON.stringify({ email: address }),
       })
+      const data = await res.json()
+      setCsrfToken(data.csrfToken ?? '')
       setEmail(address)
       setStep('code')
     })
@@ -76,7 +79,7 @@ function LoginCodeForm() {
     await run(async () => {
       const verifyRes = await fetch('/api/auth/verify-login-code', {
         method: HTTP_METHOD.POST,
-        headers: JSON_HEADERS,
+        headers: { ...JSON_HEADERS, 'x-csrf-token': csrfToken },
         body: JSON.stringify({ email, code }),
       })
       const verifyData = await verifyRes.json()
@@ -224,9 +227,8 @@ function LoginCodeForm() {
                 type="text"
                 required
                 maxLength={LOGIN_CODE_LENGTH}
-                inputMode="text"
+                inputMode="numeric"
                 autoComplete="one-time-code"
-                autoCapitalize="characters"
                 spellCheck={false}
                 aria-describedby="code-sent-to"
               />

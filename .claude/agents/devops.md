@@ -43,8 +43,6 @@ All four must pass before a PR can merge. If any step fails, fix the root cause 
 | Variable | Purpose |
 |---|---|
 | `DATABASE_URL` | Prisma connection string — Selectel PostgreSQL |
-| `UPSTASH_REDIS_REST_URL` | Upstash Redis endpoint |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis auth token |
 
 ### Public (safe for client bundle)
 | Variable | Purpose |
@@ -61,7 +59,7 @@ All four must pass before a PR can merge. If any step fails, fix the root cause 
 
 Before any deployment or pipeline change, verify:
 
-- [ ] No `DATABASE_URL` or `UPSTASH_REDIS_REST_TOKEN` in client bundle
+- [ ] No `DATABASE_URL` in client bundle
 - [ ] All secrets set in GitHub Actions repo secrets (not hardcoded in workflow YAML)
 - [ ] `.env.local` is in `.gitignore` — never committed
 - [ ] `.env.example` is up to date with all required variables

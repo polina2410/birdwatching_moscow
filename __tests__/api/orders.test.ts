@@ -20,7 +20,7 @@ const ORDER = { id: 'order-1', userId: 'user-owner', status: 'AWAITING_PAYMENT' 
 function makeRequest(orderId: string) {
   return {
     req: new Request(`http://localhost/api/orders/${orderId}`),
-    context: { params: { id: orderId } },
+    context: { params: Promise.resolve({ id: orderId }) },
   }
 }
 
