@@ -6,7 +6,9 @@ import { AUTH_LABELS } from '@/lib/auth-labels'
 import { HTTP_METHOD, JSON_HEADERS, HTTP_STATUS_CONFLICT, HTTP_STATUS_INTERNAL_SERVER_ERROR } from '@/lib/constants'
 
 const pushMock = vi.fn()
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: pushMock }) }))
+const refreshMock = vi.fn()
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: pushMock, refresh: refreshMock }) }))
+vi.mock('next-auth/react', () => ({ signIn: vi.fn().mockResolvedValue({ error: null }) }))
 
 const L = AUTH_LABELS.register
 const C = AUTH_LABELS.common
@@ -49,8 +51,8 @@ describe('RegisterPage — rendering (passwordless)', () => {
 })
 
 describe('RegisterPage — success', () => {
-  it('sends { email, name } (no password) and redirects to /login?registered=1', async () => {
-    ;(fetch as Mock).mockResolvedValue({ ok: true })
+  it('sends { email, name } (no password) and shows code entry step on success', async () => {
+    ;(fetch as Mock).mockResolvedValue({ ok: true, json: async () => ({ csrfToken: 'mock-token' }) })
     render(<RegisterPage />)
     await fillForm({ name: 'Мария', email: 'maria@test.com' })
     await waitFor(() => {
@@ -59,7 +61,7 @@ describe('RegisterPage — success', () => {
         headers: JSON_HEADERS,
         body: JSON.stringify({ email: 'maria@test.com', name: 'Мария' }),
       })
-      expect(pushMock).toHaveBeenCalledWith('/login?registered=1')
+      expect(screen.getByLabelText(L.codeField)).toBeInTheDocument()
     })
   })
 
@@ -110,7 +112,7 @@ describe('RegisterPage — loading state', () => {
     await fillForm()
     expect(screen.getByRole('button')).toBeDisabled()
     expect(screen.getByRole('button')).toHaveTextContent(L.submitting)
-    resolve({ ok: true })
-    await waitFor(() => expect(pushMock).toHaveBeenCalled())
+    resolve({ ok: true, json: async () => ({ csrfToken: 'mock-token' }) })
+    await waitFor(() => screen.getByLabelText(L.codeField))
   })
 })
