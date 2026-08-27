@@ -68,5 +68,6 @@ export default auth((req) => {
 })
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|_next/webpack-hmr|favicon\\.ico).*)']
+  matcher: ['/((?!api|_next/static|_next/image|_next/webpack-hmr|favicon\\.ico).*)'],
+  runtime: 'nodejs',
 }
