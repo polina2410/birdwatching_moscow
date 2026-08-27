@@ -58,8 +58,9 @@ function LoginCodeForm() {
         headers: JSON_HEADERS,
         body: JSON.stringify({ email: address }),
       })
-      const data = await res.json()
-      setCsrfToken(data.csrfToken ?? '')
+      let csrfData: { csrfToken?: string } = {}
+      try { csrfData = await res.json() } catch { /* no body */ }
+      setCsrfToken(csrfData.csrfToken ?? '')
       setEmail(address)
       setStep('code')
     })
