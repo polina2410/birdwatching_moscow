@@ -1,21 +1,21 @@
 # Project Roadmap
 
 ## Iteration I
-**Dependency audit & static analysis:**
-- ✅ Run `pnpm audit` before launch; resolve any high/critical findings
-- ✅ Add `pnpm audit --audit-level=high` to CI so new vulnerabilities are caught automatically
-- ✅ Enable automated dependency scanning (Snyk or GitHub Dependabot) to run continuously — catches new CVEs in existing dependencies without manual checks
-- ✅ Add ESLint security rules (`eslint-plugin-security`) to the lint step — runs on every commit and flags common issues (unsafe regex, `eval`, unvalidated redirects, etc.)
+✅ **Dependency audit & static analysis:**
+- Run `pnpm audit` before launch; resolve any high/critical findings
+- Add `pnpm audit --audit-level=high` to CI so new vulnerabilities are caught automatically
+- Enable automated dependency scanning (Snyk or GitHub Dependabot) to run continuously — catches new CVEs in existing dependencies without manual checks
+- Add ESLint security rules (`eslint-plugin-security`) to the lint step — runs on every commit and flags common issues (unsafe regex, `eval`, unvalidated redirects, etc.)
 
-### 1. Infrastructure: Domain purchase & DNS
-- ✅ Purchase the production domain
-- ✅ Point DNS to Selectel VPS IP (A record)
-- ✅ Add MX record for the sending domain (Yandex Cloud Postbox)
-- ✅ Add SPF, DKIM, DMARC records for outbound email deliverability
-- ✅ Add CAA record (`0 issue "letsencrypt.org"`) — restricts which CAs may issue certificates for the domain
-- ✅ Verify records propagate with `dig` / MXToolbox
+### ✅ 1. Infrastructure: Domain purchase & DNS
+- Purchase the production domain
+- Point DNS to Selectel VPS IP (A record)
+- Add MX record for the sending domain (Yandex Cloud Postbox)
+- Add SPF, DKIM, DMARC records for outbound email deliverability
+- Add CAA record (`0 issue "letsencrypt.org"`) — restricts which CAs may issue certificates for the domain
+- Verify records propagate with `dig` / MXToolbox
 
-### 2. Infrastructure: Selectel VPS setup & first deployment
+### ✅ 2. Infrastructure: Selectel VPS setup & first deployment
 Stand up the full production stack on the VPS:
 - Install Node.js (LTS), pnpm, PostgreSQL
 - Configure PostgreSQL: create DB user + database, restrict to localhost
@@ -33,8 +33,6 @@ Stand up the full production stack on the VPS:
 - SSH: disable password auth (`PasswordAuthentication no`) and root login (`PermitRootLogin no`) in `sshd_config` — key-based access only
 - Install `fail2ban` to block IPs after repeated SSH auth failures
 - Enable unattended security upgrades for OS packages (`unattended-upgrades`)
-- Snapshots / backups schedule
-- Monitoring alert on CPU/RAM/disk thresholds
 - Create staging
 
 ### 3. Infrastructure: Image storage setup
@@ -502,6 +500,10 @@ The site collects personal data (names, emails) and takes payments — a privacy
 - Banner links to `/oferta` for the full policy text
 - The banner appears at the bottom of the screen; dismissing it sets `privacy_accepted=true` in localStorage and hides it permanently
 - **Files:** `components/ui/PrivacyBanner.tsx`
+
+### 49. Security updates
+- Snapshots / backups schedule
+- Monitoring alert on CPU/RAM/disk thresholds
 
 ---
 
