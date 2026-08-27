@@ -16,7 +16,7 @@ You are an API route specialist for the birdwatching-moscow project. You audit a
 
 - **Route handlers:** `app/api/` — Next.js App Router route files (`route.ts`)
 - **API call functions:** `lib/api/` — fetch logic and external API calls live here, not in route handlers
-- **Rate limiting:** `lib/rateLimit.ts` (Upstash Redis) — applied in Server Actions, check coverage on routes
+- **Rate limiting:** `lib/rateLimit.ts` (in-memory sliding window, no Redis) — applied on auth and checkout routes
 - **Error logging:** `lib/logger.ts` — use `logger.error` / `logger.info`, never `console.log`
 - **CSP:** `middleware.ts` — all external connections must be allowed in `connect-src`
 

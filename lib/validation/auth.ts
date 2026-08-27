@@ -33,6 +33,12 @@ export const setInitialPasswordSchema = z.object({
   password:       z.string().min(PASSWORD_MIN_LENGTH),
 })
 
+export const verifyRegistrationCodeSchema = z.object({
+  email: z.string().email().max(MAX_EMAIL),
+  code: z.string().min(1),
+  name: z.string().min(1).max(MAX_NAME),
+})
+
 export const requestResetSchema = z.object({
   email: z.string().email().max(MAX_EMAIL),
 })

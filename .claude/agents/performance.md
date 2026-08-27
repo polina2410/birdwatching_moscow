@@ -18,7 +18,7 @@ You are a Next.js performance specialist for the birdwatching-moscow project. Yo
 - **Data fetching:** `...` in `lib/f....` calls the REST Countries API with `next: { revalidate: SIX_MONTHS_IN_SECONDS }` — ISR with a 6-month cache. Do not reduce this; the data is static.
 - **Animations:** The app uses `motion` (Framer Motion) — a risk for CLS if not sized correctly.
 - **Flags:** Served as SVGs from an external URL — no Next.js image optimization applies.
-- **Redis:** Used for rate limiting only (`lib/rateLimit.ts`) — not for data caching.
+- **Rate limiting:** `lib/rateLimit.ts` — in-memory sliding window, no Redis.
 - **Pages:** `/` (home).
 
 ## What to Audit
@@ -30,7 +30,7 @@ ANALYZE=true pnpm build
 - Check for large client-side dependencies imported unnecessarily
 - Verify `motion` components are not imported on server components
 - Look for full library imports (`import * as`) instead of selective imports
-- Check that `lib/prisma.ts`, `lib/redis.ts` never appear in client bundles
+- Check that `lib/prisma.ts` never appears in client bundles
 
 ### Server vs Client Component Split
 - Scan for `'use client'` directives — every one adds to the client bundle

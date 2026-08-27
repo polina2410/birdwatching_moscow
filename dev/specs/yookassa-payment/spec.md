@@ -193,7 +193,7 @@ Runs in a transaction, re-reads the order `FOR UPDATE`, and is a no-op if the or
 
 **Dependencies**
 - **Add `axios`** to `package.json` — it is not installed yet, and it is required (decided; `fetch` was rejected). `live.ts` builds one configured Axios instance — `baseURL`, `auth: { username: shopId, password: secretKey }`, `timeout`, `validateStatus` — and reuses it. The stub imports no HTTP client at all, so tests can assert the instance is never touched.
-- Redis is already available and is reused for checkout rate limiting.
+- Rate limiting uses the existing in-memory store in `lib/rateLimit.ts`.
 
 ## Open questions
 

@@ -3,14 +3,27 @@ import { prisma } from '@/lib/prisma'
 import { registerSchema } from '@/lib/validation/auth'
 import { sendMail } from '@/lib/mail'
 import { validateRequest } from '@/lib/api/validate'
-import { HTTP_STATUS_CONFLICT, HTTP_STATUS_INTERNAL_SERVER_ERROR } from '@/lib/constants'
+import { generateLoginCode, hashLoginCode } from '@/lib/login-code'
+import { generateLoginCsrfToken } from '@/lib/auth/csrf'
+import { checkRateLimit } from '@/lib/rateLimit'
+import { LOGIN_CODE_TTL_MS, HTTP_STATUS_CONFLICT, HTTP_STATUS_INTERNAL_SERVER_ERROR, HTTP_STATUS_TOO_MANY_REQUESTS } from '@/lib/constants'
 
 export async function POST(req: Request) {
-  const result = await validateRequest(req, registerSchema)
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    req.headers.get('x-real-ip') ??
+    'unknown'
 
-  if (!result.success) {
-    return result.response
+  const rateLimit = await checkRateLimit(ip)
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      { status: HTTP_STATUS_TOO_MANY_REQUESTS, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } }
+    )
   }
+
+  const result = await validateRequest(req, registerSchema)
+  if (!result.success) return result.response
 
   const { email, name } = result.data
 
@@ -26,25 +39,36 @@ export async function POST(req: Request) {
       )
     }
 
-    // Passwordless: regular accounts sign in with an emailed one-time code
-    await prisma.user.create({
+    await prisma.loginCode.deleteMany({
+      where: { email, usedAt: null },
+    })
+
+    const code = generateLoginCode()
+
+    await prisma.loginCode.create({
       data: {
         email,
-        name,
-        passwordHash: null,
-        role: 'USER',
+        codeHash: hashLoginCode(code),
+        expiresAt: new Date(Date.now() + LOGIN_CODE_TTL_MS),
       },
     })
 
     await sendMail({
       to: email,
-      kind: 'welcome',
-      data: { name },
+      kind: 'login-code',
+      data: { code, name },
     })
   } catch (err) {
     console.error('POST /api/auth/register failed', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: HTTP_STATUS_INTERNAL_SERVER_ERROR })
   }
 
-  return NextResponse.json({ ok: true })
+  let csrfToken: string | undefined
+  try {
+    csrfToken = generateLoginCsrfToken(email)
+  } catch (err) {
+    console.error('[auth] csrf token generation failed', err)
+  }
+
+  return NextResponse.json({ ok: true, csrfToken })
 }

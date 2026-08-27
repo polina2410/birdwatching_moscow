@@ -20,7 +20,7 @@ export const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000
 
 // Email one-time login code (USER accounts)
 export const LOGIN_CODE_LENGTH = 6
-export const LOGIN_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+export const LOGIN_CODE_ALPHABET = '0123456789'
 export const LOGIN_CODE_TTL_MS = 5 * 60 * 1000
 export const LOGIN_CODE_MAX_ATTEMPTS = 5
 export const ADMIN_CHALLENGE_TTL_MS = 10 * 60 * 1000

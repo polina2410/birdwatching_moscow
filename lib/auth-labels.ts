@@ -6,11 +6,17 @@ export const AUTH_LABELS = {
   },
 
   register: {
-    title:        'Создать аккаунт',
-    nameField:    'Имя',
-    submit:       'Создать аккаунт',
-    submitting:   'Создаём аккаунт…',
-    loginLink:    'Уже есть аккаунт? Войти',
+    title:          'Создать аккаунт',
+    confirmTitle:   'Подтвердить почту',
+    nameField:      'Имя',
+    submit:         'Создать аккаунт',
+    submitting:     'Отправляем код…',
+    loginLink:      'Уже есть аккаунт? Войти',
+    codeSentTo:     'Введите код из письма. Код отправлен на',
+    codeField:      'Код из письма',
+    verify:         'Подтвердить',
+    verifying:      'Проверяем…',
+    changeEmail:    'Указать другой email',
   },
 
   login: {
