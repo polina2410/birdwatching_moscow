@@ -70,6 +70,5 @@ export default auth((req) => {
 
 export const config = {
   // Everything except API routes, Next internals, and static assets.
-  matcher: ['/((?!api|_next/static|_next/image|_next/webpack-hmr|favicon\\.ico).*)'],
-  runtime: 'nodejs',
+  matcher: ['/((?!api|_next/static|_next/image|_next/webpack-hmr|favicon\\.ico).*)']
 }
